@@ -6,10 +6,10 @@ import { Timeline } from '../components/trace/Timeline';
 import type { TimelineStep } from '../components/trace/Timeline';
 import { useAuthStore } from '../store/useAuthStore';
 import { toast } from 'sonner';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { FileText, ShieldAlert, Calendar, Info, CornerDownRight, Award } from 'lucide-react';
+import { ShieldAlert, Calendar, Info, CornerDownRight, Award } from 'lucide-react';
 
 interface Certificate {
   laboratoryName: string;
@@ -46,9 +46,10 @@ export const Traceability: React.FC = () => {
         });
         setData(response.data);
         setError(null);
-      } catch (err: any) {
+      } catch (err) {
         if (!axios.isCancel(err)) {
-          const msg = err.response?.data?.message || 'No se pudo recuperar la trazabilidad de este lote.';
+          const error = err as { response?: { data?: { message?: string } } };
+          const msg = error.response?.data?.message || 'No se pudo recuperar la trazabilidad de este lote.';
           setError(msg);
           toast.error(msg);
         }
@@ -56,6 +57,7 @@ export const Traceability: React.FC = () => {
         setLoading(false);
       }
     };
+
 
     if (batchId) {
       fetchTraceability();

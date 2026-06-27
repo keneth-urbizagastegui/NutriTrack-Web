@@ -7,7 +7,7 @@ interface PrivateRouteProps {
   fallbackPath?: string;
 }
 
-export const PrivateRoute: React.FC<PrivateRouteProps> = ({ allowedRoles, fallbackPath = '/' }) => {
+export const PrivateRoute: React.FC<PrivateRouteProps> = ({ allowedRoles }) => {
   const { isAuthenticated, user } = useAuthStore();
 
   if (!isAuthenticated) {

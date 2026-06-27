@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { api } from '../services/api';
 import { useDebounce } from '../hooks/useDebounce';
 import { toast } from 'sonner';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -32,6 +32,23 @@ interface Product {
   fatPer100g: number;
 }
 
+interface ActiveBatch {
+  id: number;
+  batchNumber: string;
+  productName: string;
+}
+
+interface AllergenIngredient {
+  id: number;
+  name: string;
+}
+
+interface MacroTotals {
+  protein: number;
+  carbs: number;
+  fat: number;
+}
+
 export const UserDashboard: React.FC = () => {
   const [history, setHistory] = useState<ConsumptionLog[]>([]);
   const [totalPages, setTotalPages] = useState(0);
@@ -43,7 +60,7 @@ export const UserDashboard: React.FC = () => {
   const [quantityGrams, setQuantityGrams] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [activeBatches, setActiveBatches] = useState<any[]>([]);
+  const [activeBatches, setActiveBatches] = useState<ActiveBatch[]>([]);
   const [loadingBatches, setLoadingBatches] = useState(false);
 
   const fetchActiveBatches = async () => {
@@ -51,8 +68,7 @@ export const UserDashboard: React.FC = () => {
       setLoadingBatches(true);
       const response = await api.get('/batches');
       setActiveBatches(response.data);
-    } catch (err: any) {
-      console.error('Error fetching active batches', err);
+    } catch {
       toast.error('Error al cargar la lista de lotes activos.');
     } finally {
       setLoadingBatches(false);
@@ -66,7 +82,7 @@ export const UserDashboard: React.FC = () => {
   const [loadingProducts, setLoadingProducts] = useState(false);
 
   // Lista local de alérgenos activos para búsquedas proactivas
-  const [allergens, setAllergens] = useState<any[]>([]);
+  const [allergens, setAllergens] = useState<AllergenIngredient[]>([]);
 
   // Totales de macros del día
   const [dailyMacros, setDailyMacros] = useState({ protein: 0, carbs: 0, fat: 0, calories: 0 });
@@ -87,7 +103,7 @@ export const UserDashboard: React.FC = () => {
         item.consumptionDate.startsWith(today)
       );
 
-      const totals = todayConsumptions.reduce((acc: any, curr: ConsumptionLog) => {
+      const totals = todayConsumptions.reduce((acc: MacroTotals, curr: ConsumptionLog) => {
         acc.protein += curr.consumedMacros.protein;
         acc.carbs += curr.consumedMacros.carbs;
         acc.fat += curr.consumedMacros.fat;
@@ -103,7 +119,7 @@ export const UserDashboard: React.FC = () => {
         calories,
       });
 
-    } catch (err: any) {
+    } catch {
       toast.error('Error al cargar el historial de consumo.');
     } finally {
       setLoadingHistory(false);
@@ -111,6 +127,7 @@ export const UserDashboard: React.FC = () => {
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchHistory(0);
     // Cargar alérgenos guardados en la sesión
     const saved = sessionStorage.getItem('sessionAllergens');
@@ -121,6 +138,7 @@ export const UserDashboard: React.FC = () => {
 
   useEffect(() => {
     if (isModalOpen) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchActiveBatches();
     }
   }, [isModalOpen]);
@@ -138,14 +156,15 @@ export const UserDashboard: React.FC = () => {
           params: { name: debouncedSearch, page: 0, size: 5 },
         });
         setProducts(response.data.content);
-      } catch (err: any) {
-        console.error(err);
+      } catch {
+        // Error silencioso en búsqueda
       } finally {
         setLoadingProducts(false);
       }
     };
     searchProducts();
   }, [debouncedSearch]);
+
 
   const handleRegisterConsumption = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -219,15 +238,15 @@ export const UserDashboard: React.FC = () => {
               Consumo Diario de Hoy
             </h2>
             <div className="grid grid-cols-3 gap-4 text-center">
-              <div className="bg-white/5 p-4 rounded-xl border border-white/5 transition-all duration-200 hover:-translate-y-0.5 hover:border-white/10 hover:shadow-lg flex flex-col justify-between min-h-[90px]">
+              <div className="bg-white/5 p-4 rounded-xl border border-white/5 transition-all duration-200 hover:-translate-y-0.5 hover:border-white/10 hover:shadow-lg flex flex-col justify-between min-h-22.5">
                 <span className="text-[10px] font-black text-gray-500 uppercase tracking-wider">Proteína</span>
                 <span className="text-3xl font-black text-primary mt-1">{dailyMacros.protein}<span className="text-xs font-bold text-gray-400">g</span></span>
               </div>
-              <div className="bg-white/5 p-4 rounded-xl border border-white/5 transition-all duration-200 hover:-translate-y-0.5 hover:border-white/10 hover:shadow-lg flex flex-col justify-between min-h-[90px]">
+              <div className="bg-white/5 p-4 rounded-xl border border-white/5 transition-all duration-200 hover:-translate-y-0.5 hover:border-white/10 hover:shadow-lg flex flex-col justify-between min-h-22.5">
                 <span className="text-[10px] font-black text-gray-500 uppercase tracking-wider">Carbohidratos</span>
                 <span className="text-3xl font-black text-cyan-400 mt-1">{dailyMacros.carbs}<span className="text-xs font-bold text-gray-400">g</span></span>
               </div>
-              <div className="bg-white/5 p-4 rounded-xl border border-white/5 transition-all duration-200 hover:-translate-y-0.5 hover:border-white/10 hover:shadow-lg flex flex-col justify-between min-h-[90px]">
+              <div className="bg-white/5 p-4 rounded-xl border border-white/5 transition-all duration-200 hover:-translate-y-0.5 hover:border-white/10 hover:shadow-lg flex flex-col justify-between min-h-22.5">
                 <span className="text-[10px] font-black text-gray-500 uppercase tracking-wider">Grasas</span>
                 <span className="text-3xl font-black text-amber-500 mt-1">{dailyMacros.fat}<span className="text-xs font-bold text-gray-400">g</span></span>
               </div>
@@ -417,7 +436,7 @@ export const UserDashboard: React.FC = () => {
                 </thead>
                 <tbody className="divide-y divide-white/5">
                   {history.map((log) => (
-                    <tr key={log.id} className="odd:bg-white/[0.02] even:bg-transparent hover:bg-white/5 transition-all duration-200 cursor-help" title="Registro de ingesta certificado e inmutable">
+                    <tr key={log.id} className="odd:bg-white/2 even:bg-transparent hover:bg-white/5 transition-all duration-200 cursor-help" title="Registro de ingesta certificado e inmutable">
                       <td className="p-4 text-xs font-medium text-gray-400">
                         <div className="flex items-center gap-2">
                           <Lock className="h-3.5 w-3.5 text-gray-500" />

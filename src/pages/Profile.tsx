@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../services/api';
 import { toast } from 'sonner';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ShieldAlert, User, Check, Plus, AlertCircle } from 'lucide-react';
+import { ShieldAlert, User, Plus, AlertCircle } from 'lucide-react';
 
 interface Ingredient {
   id: number;
@@ -33,7 +33,7 @@ export const Profile: React.FC = () => {
           params: { page: 0, size: 50, sort: 'name,asc' }
         });
         setIngredients(response.data.content);
-      } catch (err: any) {
+      } catch {
         toast.error('Error al recuperar el catálogo de ingredientes.');
       } finally {
         setLoading(false);
@@ -58,8 +58,9 @@ export const Profile: React.FC = () => {
       sessionStorage.setItem('sessionAllergens', JSON.stringify(updatedAllergens));
       
       toast.success(`"${ingredient.name}" marcado como alérgeno correctamente.`);
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Error al guardar el alérgeno.');
+    } catch (err) {
+      const error = err as { response?: { data?: { message?: string } } };
+      toast.error(error.response?.data?.message || 'Error al guardar el alérgeno.');
     } finally {
       setSavingId(null);
     }
@@ -75,7 +76,8 @@ export const Profile: React.FC = () => {
     <div className="max-w-4xl mx-auto space-y-8">
       {/* Información del perfil */}
       <Card className="glass-panel border-none p-6 shadow-2xl relative overflow-hidden">
-        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary to-secondary" />
+        <div className="absolute top-0 left-0 right-0 h-1 bg-linear-to-r from-primary to-secondary" />
+
         <div className="flex items-center gap-4">
           <div className="bg-white/5 p-4 rounded-full border border-white/10">
             <User className="h-10 w-10 text-secondary" />
@@ -140,7 +142,7 @@ export const Profile: React.FC = () => {
           ) : ingredients.length === 0 ? (
             <p className="text-sm text-gray-400">No hay ingredientes registrados en el sistema.</p>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[350px] overflow-y-auto pr-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-87.5 overflow-y-auto pr-2">
               {ingredients.map((ing) => {
                 const isMarked = sessionAllergens.some((a) => a.id === ing.id);
                 return (

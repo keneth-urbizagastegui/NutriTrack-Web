@@ -135,11 +135,8 @@ export const ManagerDashboard: React.FC = () => {
   };
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchSuppliers(0);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchIngredients();
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchReports();
   }, []);
 
