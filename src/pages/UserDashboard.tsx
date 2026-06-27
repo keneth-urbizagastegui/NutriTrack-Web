@@ -149,14 +149,9 @@ export const UserDashboard: React.FC = () => {
     }
     // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchDefaultProducts();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchActiveBatches();
   }, []);
-
-  useEffect(() => {
-    if (isModalOpen) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      fetchActiveBatches();
-    }
-  }, [isModalOpen]);
 
   // Buscador de productos
   useEffect(() => {
@@ -455,17 +450,24 @@ export const UserDashboard: React.FC = () => {
                       <Badge className="bg-cyan-950 text-cyan-300 border border-cyan-800">C: {prod.carbsPer100g}g</Badge>
                       <Badge className="bg-amber-950 text-amber-300 border border-amber-800">G: {prod.fatPer100g}g</Badge>
                     </div>
-                    <Button
-                      size="sm"
-                      className="bg-primary hover:bg-emerald-600 text-white font-bold text-xs px-2.5 py-1.5 rounded cursor-pointer transition-all duration-200 flex items-center gap-1"
-                      onClick={() => {
-                        setSelectedProduct(prod.name);
-                        setBatchId('');
-                        setIsModalOpen(true);
-                      }}
-                    >
-                      <PlusCircle className="h-3.5 w-3.5" /> Registrar Ingesta
-                    </Button>
+                    {(() => {
+                      const activeBatch = activeBatches.find(b => b.productName === prod.name);
+                      return activeBatch ? (
+                        <Button
+                          asChild
+                          size="sm"
+                          className="bg-[#0e7490] hover:bg-cyan-600 text-white font-bold text-xs px-2.5 py-1.5 rounded cursor-pointer transition-all duration-200 flex items-center gap-1 animate-fade-in"
+                        >
+                          <Link to={`/traceability/${activeBatch.id}`}>
+                            <Eye className="h-3.5 w-3.5" /> Ver Trazabilidad
+                          </Link>
+                        </Button>
+                      ) : (
+                        <Badge variant="outline" className="text-gray-500 border-white/5 bg-white/2 text-[10px]">
+                          Sin Lotes Activos
+                        </Badge>
+                      );
+                    })()}
                   </div>
                 </div>
               );
