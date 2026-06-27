@@ -40,8 +40,9 @@ export const Login: React.FC = () => {
       } else {
         navigate('/dashboard');
       }
-    } catch (err: any) {
-      const errorMsg = err.response?.data?.message || 'Credenciales inválidas o error de conexión.';
+    } catch (err) {
+      const error = err as { response?: { data?: { message?: string } } };
+      const errorMsg = error.response?.data?.message || 'Credenciales inválidas o error de conexión.';
       toast.error(errorMsg);
     } finally {
       setLoading(false);
@@ -52,7 +53,7 @@ export const Login: React.FC = () => {
     <div className="flex items-center justify-center min-h-[75vh] px-4">
       <Card className="glass-panel border-none w-full max-w-md shadow-2xl relative overflow-hidden">
         {/* Adorno estético superior */}
-        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary to-secondary" />
+        <div className="absolute top-0 left-0 right-0 h-1 bg-linear-to-r from-primary to-secondary" />
 
         <CardHeader className="text-center pt-8">
           <div className="flex justify-center mb-3">

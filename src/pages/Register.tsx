@@ -50,8 +50,9 @@ export const Register: React.FC = () => {
       await api.post('/auth/register', { username, email, password });
       toast.success('Registro exitoso. Por favor, inicia sesión.');
       navigate('/login');
-    } catch (err: any) {
-      const errorMsg = err.response?.data?.message || 'Error al registrar el usuario. El correo o usuario ya existe.';
+    } catch (err) {
+      const error = err as { response?: { data?: { message?: string } } };
+      const errorMsg = error.response?.data?.message || 'Error al registrar el usuario. El correo o usuario ya existe.';
       toast.error(errorMsg);
     } finally {
       setLoading(false);
@@ -61,7 +62,7 @@ export const Register: React.FC = () => {
   return (
     <div className="flex items-center justify-center min-h-[75vh] px-4">
       <Card className="glass-panel border-none w-full max-w-md shadow-2xl relative overflow-hidden">
-        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary to-secondary" />
+        <div className="absolute top-0 left-0 right-0 h-1 bg-linear-to-r from-primary to-secondary" />
 
         <CardHeader className="text-center pt-8">
           <div className="flex justify-center mb-3">
@@ -86,7 +87,7 @@ export const Register: React.FC = () => {
                   placeholder="victor.fitness"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  className="bg-white/5 border-white/10 text-white pl-10 focus:border-primary"
+                  className="bg-white/5 border-white/10 text-white pl-10 focus:border-primary focus:ring-1 focus:ring-primary"
                   disabled={loading}
                   required
                 />
@@ -102,7 +103,7 @@ export const Register: React.FC = () => {
                   placeholder="deportista@utec.edu.pe"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="bg-white/5 border-white/10 text-white pl-10 focus:border-primary"
+                  className="bg-white/5 border-white/10 text-white pl-10 focus:border-primary focus:ring-1 focus:ring-primary"
                   disabled={loading}
                   required
                 />
@@ -118,7 +119,7 @@ export const Register: React.FC = () => {
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="bg-white/5 border-white/10 text-white pl-10 pr-10 focus:border-primary"
+                  className="bg-white/5 border-white/10 text-white pl-10 pr-10 focus:border-primary focus:ring-1 focus:ring-primary"
                   disabled={loading}
                   required
                 />
@@ -141,7 +142,7 @@ export const Register: React.FC = () => {
                   placeholder="••••••••"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="bg-white/5 border-white/10 text-white pl-10 pr-10 focus:border-primary"
+                  className="bg-white/5 border-white/10 text-white pl-10 pr-10 focus:border-primary focus:ring-1 focus:ring-primary"
                   disabled={loading}
                   required
                 />
