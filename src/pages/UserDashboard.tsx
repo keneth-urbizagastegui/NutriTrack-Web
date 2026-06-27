@@ -65,6 +65,9 @@ export const UserDashboard: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
 
+  // Lista local de alérgenos activos para búsquedas proactivas
+  const [allergens, setAllergens] = useState<any[]>([]);
+
   // Totales de macros del día
   const [dailyMacros, setDailyMacros] = useState({ protein: 0, carbs: 0, fat: 0, calories: 0 });
 
@@ -109,6 +112,11 @@ export const UserDashboard: React.FC = () => {
 
   useEffect(() => {
     fetchHistory(0);
+    // Cargar alérgenos guardados en la sesión
+    const saved = sessionStorage.getItem('sessionAllergens');
+    if (saved) {
+      setAllergens(JSON.parse(saved));
+    }
   }, []);
 
   useEffect(() => {
@@ -160,8 +168,6 @@ export const UserDashboard: React.FC = () => {
       setIsModalOpen(false);
       fetchHistory(0); // Recargar historial
     } catch (err: any) {
-      // Manejar colisiones de alérgenos (AllergenAlertException 400)
-      // o lotes retirados (BatchRecallException 409)
       const errorMsg = err.response?.data?.message || 'Error al registrar el consumo.';
       toast.error(
         <div className="flex flex-col gap-1.5">
@@ -177,6 +183,31 @@ export const UserDashboard: React.FC = () => {
     }
   };
 
+  // Función para evaluar si un producto buscado contiene alérgenos del usuario
+  const getProductAllergenWarning = (productName: string, productDesc: string) => {
+    if (allergens.length === 0) return null;
+    
+    const prodNameNorm = productName.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    const prodDescNorm = (productDesc || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+    for (const alg of allergens) {
+      const algNameNorm = alg.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      
+      // Caso de Whey / Lactosa y Suero
+      if (prodNameNorm.includes("whey") || prodNameNorm.includes("isolada") || prodNameNorm.includes("suero")) {
+        if (algNameNorm.includes("suero") || algNameNorm.includes("lactosa")) {
+          return alg.name;
+        }
+      }
+
+      // Coincidencia directa
+      if (prodNameNorm.includes(algNameNorm) || prodDescNorm.includes(algNameNorm)) {
+        return alg.name;
+      }
+    }
+    return null;
+  };
+
   return (
     <div className="space-y-8">
       {/* Panel de Resumen Diario con Gráfico Circular SVG */}
@@ -188,17 +219,17 @@ export const UserDashboard: React.FC = () => {
               Consumo Diario de Hoy
             </h2>
             <div className="grid grid-cols-3 gap-4 text-center">
-              <div className="bg-white/5 p-3 rounded-lg border border-white/5">
-                <p className="text-xs text-gray-400">Proteína</p>
-                <p className="text-xl font-bold text-primary">{dailyMacros.protein}g</p>
+              <div className="bg-white/5 p-4 rounded-xl border border-white/5 transition-all duration-200 hover:-translate-y-0.5 hover:border-white/10 hover:shadow-lg flex flex-col justify-between min-h-[90px]">
+                <span className="text-[10px] font-black text-gray-500 uppercase tracking-wider">Proteína</span>
+                <span className="text-3xl font-black text-primary mt-1">{dailyMacros.protein}<span className="text-xs font-bold text-gray-400">g</span></span>
               </div>
-              <div className="bg-white/5 p-3 rounded-lg border border-white/5">
-                <p className="text-xs text-gray-400">Carbos</p>
-                <p className="text-xl font-bold text-secondary">{dailyMacros.carbs}g</p>
+              <div className="bg-white/5 p-4 rounded-xl border border-white/5 transition-all duration-200 hover:-translate-y-0.5 hover:border-white/10 hover:shadow-lg flex flex-col justify-between min-h-[90px]">
+                <span className="text-[10px] font-black text-gray-500 uppercase tracking-wider">Carbohidratos</span>
+                <span className="text-3xl font-black text-cyan-400 mt-1">{dailyMacros.carbs}<span className="text-xs font-bold text-gray-400">g</span></span>
               </div>
-              <div className="bg-white/5 p-3 rounded-lg border border-white/5">
-                <p className="text-xs text-gray-400">Grasas</p>
-                <p className="text-xl font-bold text-amber-500">{dailyMacros.fat}g</p>
+              <div className="bg-white/5 p-4 rounded-xl border border-white/5 transition-all duration-200 hover:-translate-y-0.5 hover:border-white/10 hover:shadow-lg flex flex-col justify-between min-h-[90px]">
+                <span className="text-[10px] font-black text-gray-500 uppercase tracking-wider">Grasas</span>
+                <span className="text-3xl font-black text-amber-500 mt-1">{dailyMacros.fat}<span className="text-xs font-bold text-gray-400">g</span></span>
               </div>
             </div>
             <p className="text-xs text-gray-400">
@@ -206,47 +237,36 @@ export const UserDashboard: React.FC = () => {
             </p>
           </div>
 
-          {/* Gráfico circular SVG interactivo */}
+          {/* Gráfico circular SVG interactivo para KCAL */}
           <div className="relative flex items-center justify-center w-40 h-40">
             <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+              {/* Círculo de fondo gris plano */}
               <circle cx="50" cy="50" r="40" stroke="rgba(255,255,255,0.05)" strokeWidth="8" fill="transparent" />
               {dailyMacros.calories > 0 && (
-                <>
-                  {/* Círculo Proteína */}
-                  <circle
-                    cx="50"
-                    cy="50"
-                    r="40"
-                    stroke="#10b981"
-                    strokeWidth="8"
-                    fill="transparent"
-                    strokeDasharray={`${(dailyMacros.protein / 150) * 251.2} 251.2`}
-                    strokeLinecap="round"
-                  />
-                  {/* Círculo Carbos (Offset) */}
-                  <circle
-                    cx="50"
-                    cy="50"
-                    r="32"
-                    stroke="#06b6d4"
-                    strokeWidth="6"
-                    fill="transparent"
-                    strokeDasharray={`${(dailyMacros.carbs / 200) * 201} 201`}
-                    strokeLinecap="round"
-                  />
-                </>
+                <circle
+                  cx="50"
+                  cy="50"
+                  r="40"
+                  stroke="#10b981"
+                  strokeWidth="8"
+                  fill="transparent"
+                  strokeDasharray={`${(Math.min(dailyMacros.calories, 2000) / 2000) * 251.3} 251.3`}
+                  strokeLinecap="round"
+                  className="transition-all duration-500 ease-out"
+                />
               )}
             </svg>
             <div className="absolute flex flex-col items-center justify-center text-center">
               <Flame className="h-6 w-6 text-amber-500 animate-pulse" />
               <span className="text-2xl font-black text-white">{dailyMacros.calories}</span>
               <span className="text-[10px] uppercase text-gray-400 tracking-wider font-bold">Kcal</span>
+              <span className="text-[8px] text-gray-500 font-bold mt-0.5">Meta: 2000</span>
             </div>
           </div>
         </Card>
 
         {/* Acceso Rápido: Registrar Consumo */}
-        <Card className="glass-panel border-none p-6 flex flex-col justify-center items-center text-center shadow-2xl relative overflow-hidden">
+        <Card className="glass-panel border-none p-6 flex flex-col justify-center items-center text-center shadow-2xl relative overflow-hidden transition-all duration-200 hover:border-white/10">
           <div className="absolute top-0 right-0 w-24 h-24 bg-primary/10 rounded-full blur-2xl" />
           <h3 className="text-lg font-bold text-white mb-2">¿Escaneaste un lote?</h3>
           <p className="text-xs text-gray-400 mb-6">
@@ -254,7 +274,7 @@ export const UserDashboard: React.FC = () => {
           </p>
           <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
             <DialogTrigger asChild>
-              <Button className="w-full bg-primary hover:bg-emerald-600 text-white font-bold flex items-center gap-2">
+              <Button className="w-full bg-primary hover:bg-emerald-600 text-white font-bold flex items-center gap-2 transition-all duration-200 hover:-translate-y-0.5">
                 <PlusCircle className="h-5 w-5" />
                 Registrar Consumo
               </Button>
@@ -297,7 +317,7 @@ export const UserDashboard: React.FC = () => {
                     placeholder="ej. 40"
                     value={quantityGrams}
                     onChange={(e) => setQuantityGrams(e.target.value)}
-                    className="bg-white/5 border-white/10 text-white"
+                    className="bg-white/5 border-white/10 text-white focus:border-primary focus:ring-1 focus:ring-primary"
                     disabled={submitting}
                     required
                   />
@@ -316,21 +336,21 @@ export const UserDashboard: React.FC = () => {
       </div>
 
       {/* Buscador de Catálogo de Productos */}
-      <Card className="glass-panel border-none p-6 shadow-2xl">
+      <Card className="glass-panel border-none p-6 shadow-2xl transition-all duration-200 hover:border-white/10">
         <CardHeader className="px-0 pt-0">
           <CardTitle className="text-lg font-bold text-white">Buscador de Suplementos y Alimentos</CardTitle>
           <CardDescription className="text-gray-400">
             Busca y consulta el valor nutricional de los productos registrados en el sistema
           </CardDescription>
         </CardHeader>
-        <div className="relative">
-          <Search className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
+        <div className="relative group">
+          <Search className="absolute left-4 top-3 h-4 w-4 text-gray-400 group-hover:text-primary transition-colors" />
           <Input
             type="text"
             placeholder="Buscar por nombre de producto (ej. Proteína)..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="bg-white/5 border-white/10 text-white pl-10 focus:border-primary"
+            className="bg-white/5 border-white/10 text-white pl-11 pr-4 focus:border-primary focus:ring-1 focus:ring-primary placeholder:text-gray-400 transition-all duration-200"
           />
         </div>
 
@@ -338,25 +358,35 @@ export const UserDashboard: React.FC = () => {
         {loadingProducts && <p className="text-xs text-gray-400 mt-4 animate-pulse">Buscando productos...</p>}
         {products.length > 0 && (
           <div className="mt-4 border border-white/5 rounded-lg overflow-hidden divide-y divide-white/5">
-            {products.map((prod) => (
-              <div key={prod.id} className="p-4 bg-white/5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div>
-                  <h4 className="font-bold text-white text-sm">{prod.name}</h4>
-                  <p className="text-xs text-gray-400">{prod.brand} • {prod.category}</p>
+            {products.map((prod) => {
+              const allergenWarning = getProductAllergenWarning(prod.name, prod.description);
+              return (
+                <div key={prod.id} className="p-4 bg-white/5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:bg-white/10 transition-colors duration-200">
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h4 className="font-bold text-white text-sm">{prod.name}</h4>
+                      {allergenWarning && (
+                        <Badge className="bg-rose-500/20 text-rose-300 border border-rose-500/30 text-[10px] font-black flex items-center gap-1">
+                          <AlertTriangle className="h-3 w-3 text-rose-400 animate-pulse" /> Contiene: {allergenWarning}
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-400">{prod.brand} • {prod.category}</p>
+                  </div>
+                  <div className="flex gap-3 text-xs">
+                    <Badge className="bg-emerald-950 text-emerald-300 border border-emerald-800">P: {prod.proteinPer100g}g</Badge>
+                    <Badge className="bg-cyan-950 text-cyan-300 border border-cyan-800">C: {prod.carbsPer100g}g</Badge>
+                    <Badge className="bg-amber-950 text-amber-300 border border-amber-800">G: {prod.fatPer100g}g</Badge>
+                  </div>
                 </div>
-                <div className="flex gap-3 text-xs">
-                  <Badge className="bg-emerald-950 text-emerald-300 border border-emerald-800">P: {prod.proteinPer100g}g</Badge>
-                  <Badge className="bg-cyan-950 text-cyan-300 border border-cyan-800">C: {prod.carbsPer100g}g</Badge>
-                  <Badge className="bg-amber-950 text-amber-300 border border-amber-800">G: {prod.fatPer100g}g</Badge>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </Card>
 
       {/* Historial de Consumos Paginado */}
-      <Card className="glass-panel border-none p-6 shadow-2xl">
+      <Card className="glass-panel border-none p-6 shadow-2xl transition-all duration-200 hover:border-white/10">
         <CardHeader className="px-0 pt-0 flex flex-row items-center justify-between">
           <div>
             <CardTitle className="text-lg font-bold text-white">Historial de Consumos</CardTitle>
@@ -367,10 +397,13 @@ export const UserDashboard: React.FC = () => {
         {loadingHistory ? (
           <p className="text-center py-6 text-sm text-gray-400">Cargando historial...</p>
         ) : history.length === 0 ? (
-          <p className="text-center py-8 text-sm text-gray-400">Aún no tienes consumos registrados.</p>
+          <div className="flex flex-col items-center justify-center py-12 text-gray-400 gap-3 border border-white/5 border-dashed rounded-lg bg-white/5">
+            <Dumbbell className="h-10 w-10 text-gray-600 stroke-[1.5]" />
+            <p className="text-sm font-medium">Aún no tienes consumos registrados.</p>
+          </div>
         ) : (
           <div className="space-y-4">
-            <div className="overflow-x-auto border border-white/5 rounded-lg">
+            <div className="overflow-x-auto border border-white/5 rounded-lg shadow-inner">
               <table className="w-full text-left border-collapse text-sm text-gray-300">
                 <thead>
                   <tr className="bg-white/5 border-b border-white/10 text-xs font-semibold uppercase text-gray-400">
@@ -378,16 +411,21 @@ export const UserDashboard: React.FC = () => {
                     <th className="p-4">Producto</th>
                     <th className="p-4 text-center">Gramos</th>
                     <th className="p-4 text-center">Proteína</th>
-                    <th className="p-4 text-center">Carbos</th>
+                    <th className="p-4 text-center">Carbohidratos</th>
                     <th className="p-4 text-center">Grasas</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
                   {history.map((log) => (
-                    <tr key={log.id} className="hover:bg-white/5 transition-colors">
-                      <td className="p-4 text-xs font-medium text-gray-400 flex items-center gap-1">
-                        <Calendar className="h-3.5 w-3.5" />
-                        {new Date(log.consumptionDate).toLocaleDateString()} {new Date(log.consumptionDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    <tr key={log.id} className="odd:bg-white/[0.02] even:bg-transparent hover:bg-white/5 transition-all duration-200 cursor-help" title="Registro de ingesta certificado e inmutable">
+                      <td className="p-4 text-xs font-medium text-gray-400">
+                        <div className="flex items-center gap-2">
+                          <Lock className="h-3.5 w-3.5 text-gray-500" />
+                          <span className="flex items-center gap-1">
+                            <Calendar className="h-3.5 w-3.5 text-gray-600" />
+                            {new Date(log.consumptionDate).toLocaleDateString()} {new Date(log.consumptionDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
                       </td>
                       <td className="p-4 font-semibold text-white">{log.productName}</td>
                       <td className="p-4 text-center font-bold text-gray-100">{log.quantityGrams}g</td>

@@ -91,16 +91,16 @@ export const Traceability: React.FC = () => {
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8">
+    <div className="max-w-4xl mx-auto space-y-8 animate-fade-in">
       {/* Encabezado del Producto y Lote */}
-      <Card className="glass-panel border-none relative overflow-hidden shadow-2xl">
+      <Card className="glass-panel border-none relative overflow-hidden shadow-2xl transition-all duration-200 hover:border-white/10">
         <div className={`absolute top-0 left-0 right-0 h-1.5 ${data.status === 'ACTIVE' ? 'bg-primary' : 'bg-rose-500'}`} />
         
         <div className="p-6 md:p-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
           <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold text-primary uppercase bg-primary/10 px-2.5 py-0.5 rounded border border-primary/20">
-                Fit Traceability
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-semibold text-primary uppercase bg-primary/10 px-2.5 py-0.5 rounded border border-primary/20 flex items-center gap-1">
+                🛡️ Datos de Trazabilidad Inmutables
               </span>
               <Badge variant={data.status === 'ACTIVE' ? 'default' : 'destructive'} className="font-bold text-xs uppercase">
                 {data.status === 'ACTIVE' ? 'Lote Activo (Apto)' : 'Retirado (Recall)'}
@@ -115,7 +115,7 @@ export const Traceability: React.FC = () => {
 
           <div className="flex flex-col gap-3 w-full md:w-auto">
             {data.status === 'ACTIVE' ? (
-              <Button asChild variant="destructive" className="flex items-center gap-2 font-bold w-full md:w-auto">
+              <Button asChild variant="destructive" className="flex items-center gap-2 font-bold w-full md:w-auto transition-all duration-200 hover:-translate-y-0.5">
                 <Link to={isAuthenticated ? `/quality-reports/new/${data.batchId}` : '/login'}>
                   <ShieldAlert className="h-4 w-4" />
                   Reportar Lote Defectuoso
@@ -146,21 +146,21 @@ export const Traceability: React.FC = () => {
       {/* Certificados del Lote */}
       <div className="space-y-4">
         <h2 className="text-xl font-bold text-white flex items-center gap-2 ml-2">
-          <Award className="h-5 w-5 text-secondary" />
+          <Award className="h-5 w-5 text-secondary animate-pulse" />
           Certificados Químicos y de Calidad
         </h2>
         {data.certificates && data.certificates.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {data.certificates.map((cert, index) => (
-              <Card key={index} className="glass-panel border-none p-5 flex items-center justify-between shadow-lg hover:bg-white/10 transition-colors">
+              <Card key={index} className="glass-panel border-none p-5 flex items-center justify-between shadow-lg hover:bg-white/10 hover:border-white/10 transition-all duration-250">
                 <div className="space-y-1">
                   <h4 className="font-bold text-white text-sm">{cert.laboratoryName}</h4>
                   <p className="text-xs text-gray-400">Fecha: {cert.issueDate}</p>
                 </div>
-                <Button asChild size="sm" className="bg-white/5 border border-white/10 text-gray-300 hover:text-white hover:bg-white/10">
+                <Button asChild size="sm" className="bg-primary hover:bg-emerald-600 text-white font-bold transition-all duration-200 hover:-translate-y-0.5 shadow-md border-none">
                   <a href={cert.documentUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5">
-                    <FileText className="h-4 w-4 text-primary" />
-                    Ver PDF
+                    <Award className="h-4 w-4 text-white" />
+                    Certificado Oficial Calidad
                   </a>
                 </Button>
               </Card>
@@ -173,6 +173,7 @@ export const Traceability: React.FC = () => {
           </Card>
         )}
       </div>
+
 
       {/* Línea de tiempo de Ingredientes */}
       <div className="space-y-4">

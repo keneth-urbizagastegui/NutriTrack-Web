@@ -103,7 +103,7 @@ export const Profile: React.FC = () => {
             <div className="flex flex-wrap gap-2 mt-2">
               {sessionAllergens.length > 0 ? (
                 sessionAllergens.map((alg) => (
-                  <Badge key={alg.id} className="bg-rose-950/40 text-rose-400 border border-rose-800 uppercase font-bold py-1 px-2.5">
+                  <Badge key={alg.id} className="bg-rose-600 hover:bg-rose-700 text-white border-none uppercase font-black px-3 py-1.5 text-[10px] rounded-lg tracking-wider transition-all duration-200">
                     {alg.name}
                   </Badge>
                 ))
@@ -119,7 +119,7 @@ export const Profile: React.FC = () => {
             <Button
               onClick={handleClearAllergens}
               variant="outline"
-              className="w-full mt-6 border-white/10 text-gray-400 hover:text-white"
+              className="w-full mt-6 border-white/10 text-gray-400 hover:text-white hover:bg-white/5 transition-all duration-200"
             >
               Limpiar Vista Sesión
             </Button>
@@ -127,7 +127,7 @@ export const Profile: React.FC = () => {
         </Card>
 
         {/* Buscador/Selector de Ingredientes */}
-        <Card className="glass-panel border-none p-6 shadow-xl md:col-span-2">
+        <Card className="glass-panel border-none p-6 shadow-xl md:col-span-2 transition-all duration-200 hover:border-white/10">
           <CardHeader className="px-0 pt-0">
             <CardTitle className="text-lg font-bold text-white">Marcar Alérgenos del Catálogo</CardTitle>
             <CardDescription className="text-gray-400">
@@ -146,7 +146,7 @@ export const Profile: React.FC = () => {
                 return (
                   <div
                     key={ing.id}
-                    className="p-3 bg-white/5 rounded-lg border border-white/5 flex items-center justify-between gap-2 hover:bg-white/10 transition-colors"
+                    className="p-3 bg-white/5 rounded-lg border border-white/5 flex items-center justify-between gap-2 hover:bg-white/10 hover:border-white/10 transition-all duration-200"
                   >
                     <div>
                       <h4 className="font-bold text-white text-sm">{ing.name}</h4>
@@ -156,13 +156,13 @@ export const Profile: React.FC = () => {
                       size="sm"
                       onClick={() => handleAddAllergen(ing)}
                       className={isMarked 
-                        ? 'bg-emerald-950 text-emerald-300 border border-emerald-800' 
-                        : 'bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300'
+                        ? 'bg-rose-950/40 text-rose-400 border border-rose-850 hover:bg-rose-900/50' 
+                        : 'bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 transition-all duration-200'
                       }
                       disabled={savingId === ing.id}
                     >
                       {isMarked ? (
-                        <Check className="h-4 w-4" />
+                        <ShieldAlert className="h-4 w-4 text-rose-400 animate-pulse" />
                       ) : savingId === ing.id ? (
                         '...'
                       ) : (
@@ -175,6 +175,7 @@ export const Profile: React.FC = () => {
             </div>
           )}
         </Card>
+
       </div>
     </div>
   );

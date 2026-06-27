@@ -44,18 +44,21 @@ export const Timeline: React.FC<TimelineProps> = ({ steps }) => {
   }
 
   return (
-    <div className="relative border-l border-white/10 ml-4 py-2 space-y-8">
+    <div className="relative ml-4 py-2 space-y-8">
+      {/* Línea conectora vertical con gradiente */}
+      <div className="absolute left-[15px] top-4 bottom-4 w-[2px] bg-gradient-to-b from-primary via-emerald-500/40 to-slate-800" />
+
       {steps.map((step, idx) => (
         <div key={idx} className="relative ml-8">
-          {/* Nodo indicador en la línea */}
-          <span className="absolute -left-12 top-1.5 flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 border border-white/10 shadow-lg">
+          {/* Nodo indicador en la línea con brillo */}
+          <span className="absolute -left-12 top-1.5 flex h-8 w-8 items-center justify-center rounded-full bg-[#0d1527] border-2 border-primary shadow-[0_0_15px_rgba(16,185,129,0.3)]">
             <span className={`h-3 w-3 rounded-full ${
               step.freshness === 'FRESH' ? 'bg-emerald-500 animate-pulse' :
               step.freshness === 'MATURING' ? 'bg-amber-500' : 'bg-rose-500'
             }`} />
           </span>
 
-          <div className={`glass-panel p-5 border rounded-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4 transition-all hover:border-white/20 ${getFreshnessStyles(step.freshness)}`}>
+          <div className={`glass-panel p-5 border rounded-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl hover:border-white/20 ${getFreshnessStyles(step.freshness)}`}>
             <div className="space-y-1.5">
               <h4 className="font-bold text-lg text-white flex items-center gap-2">
                 {step.ingredientName}
@@ -86,3 +89,4 @@ export const Timeline: React.FC<TimelineProps> = ({ steps }) => {
   );
 };
 export default Timeline;
+
