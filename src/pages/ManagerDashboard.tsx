@@ -135,6 +135,7 @@ export const ManagerDashboard: React.FC = () => {
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchSuppliers(0);
     fetchIngredients();
     fetchReports();

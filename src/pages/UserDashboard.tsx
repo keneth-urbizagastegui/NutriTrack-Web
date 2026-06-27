@@ -186,8 +186,9 @@ export const UserDashboard: React.FC = () => {
       setQuantityGrams('');
       setIsModalOpen(false);
       fetchHistory(0); // Recargar historial
-    } catch (err: any) {
-      const errorMsg = err.response?.data?.message || 'Error al registrar el consumo.';
+    } catch (err) {
+      const error = err as { response?: { data?: { message?: string } } };
+      const errorMsg = error.response?.data?.message || 'Error al registrar el consumo.';
       toast.error(
         <div className="flex flex-col gap-1.5">
           <span className="font-bold flex items-center gap-1 text-rose-500">
