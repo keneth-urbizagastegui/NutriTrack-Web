@@ -2,10 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../services/api';
 import { toast } from 'sonner';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ShoppingBag, PlusCircle, ChevronLeft, ChevronRight, Activity, CornerDownRight } from 'lucide-react';
+import { ShoppingBag, PlusCircle, ChevronLeft, ChevronRight, CornerDownRight } from 'lucide-react';
 
 interface Product {
   id: number;
@@ -33,7 +33,7 @@ export const ProductList: React.FC = () => {
       setProducts(response.data.content);
       setTotalPages(response.data.totalPages);
       setPage(pageToFetch);
-    } catch (err: any) {
+    } catch {
       toast.error('Error al cargar la lista de productos.');
     } finally {
       setLoading(false);
@@ -41,8 +41,10 @@ export const ProductList: React.FC = () => {
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchProducts(0);
   }, []);
+
 
   return (
     <div className="space-y-6">

@@ -58,8 +58,9 @@ export const CreateProduct: React.FC = () => {
 
       toast.success('Producto creado correctamente en el catálogo.');
       navigate('/products');
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Error al crear el producto.');
+    } catch (err) {
+      const error = err as { response?: { data?: { message?: string } } };
+      toast.error(error.response?.data?.message || 'Error al crear el producto.');
     } finally {
       setSubmitting(false);
     }
@@ -77,7 +78,8 @@ export const CreateProduct: React.FC = () => {
       </div>
 
       <Card className="glass-panel border-none p-6 shadow-2xl relative overflow-hidden">
-        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary to-secondary" />
+        <div className="absolute top-0 left-0 right-0 h-1 bg-linear-to-r from-primary to-secondary" />
+
 
         <CardHeader className="px-0 pt-0">
           <div className="flex items-center gap-2 mb-2">

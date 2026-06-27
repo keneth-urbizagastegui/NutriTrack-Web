@@ -6,7 +6,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Loader2, Dumbbell, Calendar, QrCode, Plus, Check, Link as LinkIcon, User } from 'lucide-react';
+import { ArrowLeft, Loader2, Dumbbell, QrCode, Check, Link as LinkIcon } from 'lucide-react';
 import { useNavigate as routerNavigate } from 'react-router-dom';
 
 interface Product {
@@ -33,6 +33,12 @@ interface LinkedIngredient {
   freshnessStatus: string;
 }
 
+interface CreatedBatch {
+  id: number;
+  batchNumber: string;
+  qrCodeUrl: string;
+}
+
 export const CreateBatch: React.FC = () => {
   const { productId } = useParams<{ productId: string }>();
   const navigate = routerNavigate();
@@ -47,7 +53,7 @@ export const CreateBatch: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
 
   // Lote Creado (para el paso 2: Vincular ingredientes)
-  const [createdBatch, setCreatedBatch] = useState<any>(null);
+  const [createdBatch, setCreatedBatch] = useState<CreatedBatch | null>(null);
 
   // Catálogos para vinculación
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
@@ -79,7 +85,7 @@ export const CreateBatch: React.FC = () => {
 
         const supRes = await api.get('/suppliers', { params: { size: 50 } });
         setSuppliers(supRes.data.content.filter((s: Supplier) => s.isActive));
-      } catch (err: any) {
+      } catch {
         toast.error('Error al cargar datos base del lote.');
       } finally {
         setLoadingProduct(false);
@@ -112,8 +118,9 @@ export const CreateBatch: React.FC = () => {
 
       setCreatedBatch(response.data);
       toast.success('Lote creado y QR dinámico generado en AWS S3.');
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Error al crear el lote de producción.');
+    } catch (err) {
+      const error = err as { response?: { data?: { message?: string } } };
+      toast.error(error.response?.data?.message || 'Error al crear el lote de producción.');
     } finally {
       setSubmitting(false);
     }
@@ -125,6 +132,8 @@ export const CreateBatch: React.FC = () => {
       toast.error('Completa los campos de ingrediente, proveedor y llegada.');
       return;
     }
+
+    if (!createdBatch) return;
 
     try {
       setLinking(true);
@@ -152,8 +161,9 @@ export const CreateBatch: React.FC = () => {
       setSelectedIngredient('');
       setSelectedSupplier('');
       setArrivalDate('');
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Error al asociar ingrediente.');
+    } catch (err) {
+      const error = err as { response?: { data?: { message?: string } } };
+      toast.error(error.response?.data?.message || 'Error al asociar ingrediente.');
     } finally {
       setLinking(false);
     }
@@ -180,7 +190,8 @@ export const CreateBatch: React.FC = () => {
       </div>
 
       <Card className="glass-panel border-none p-6 shadow-2xl relative overflow-hidden">
-        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary to-secondary" />
+        <div className="absolute top-0 left-0 right-0 h-1 bg-linear-to-r from-primary to-secondary" />
+
 
         <CardHeader className="px-0 pt-0">
           <div className="flex items-center gap-2 mb-2">

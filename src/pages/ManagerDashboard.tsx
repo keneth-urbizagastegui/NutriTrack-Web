@@ -3,14 +3,14 @@ import { Link } from 'react-router-dom';
 import { api } from '../services/api';
 import { useAuthStore } from '../store/useAuthStore';
 import { toast } from 'sonner';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { 
-  ShieldAlert, ShieldCheck, PlusCircle, Factory, Trash2, ToggleLeft, ToggleRight, 
-  ChevronLeft, ChevronRight, ShoppingBag, Layers, Users, PhoneCall, AlertTriangle 
+  ShieldAlert, Factory, ToggleLeft, ToggleRight, 
+  ChevronLeft, ChevronRight, Layers, Users, PhoneCall 
 } from 'lucide-react';
 
 interface Supplier {
@@ -29,6 +29,17 @@ interface Ingredient {
 
 interface MockReport {
   id: number;
+  batchId: number;
+  batchNumber: string;
+  productName: string;
+  title: string;
+  description: string;
+  reportDate: string;
+  status: 'PENDING' | 'RESOLVED_OK' | 'RECALLED_BATCH';
+}
+
+interface RawReportResponse {
+  reportId: number;
   batchId: number;
   batchNumber: string;
   productName: string;
@@ -78,7 +89,7 @@ export const ManagerDashboard: React.FC = () => {
       setSuppliers(response.data.content);
       setSupplierTotalPages(response.data.totalPages);
       setSupplierPage(page);
-    } catch (err: any) {
+    } catch {
       toast.error('Error al cargar la lista de proveedores.');
     } finally {
       setLoadingSuppliers(false);
@@ -92,7 +103,7 @@ export const ManagerDashboard: React.FC = () => {
         params: { page: 0, size: 10, sort: 'name,asc' }
       });
       setIngredients(response.data.content);
-    } catch (err: any) {
+    } catch {
       toast.error('Error al cargar la lista de ingredientes.');
     } finally {
       setLoadingIngredients(false);
@@ -103,7 +114,7 @@ export const ManagerDashboard: React.FC = () => {
     try {
       setLoadingReports(true);
       const response = await api.get('/batches/quality-reports');
-      const formatted = response.data.map((r: any) => ({
+      const formatted = response.data.map((r: RawReportResponse) => ({
         id: r.reportId,
         batchId: r.batchId,
         batchNumber: r.batchNumber,
@@ -114,9 +125,9 @@ export const ManagerDashboard: React.FC = () => {
         status: r.status,
       }));
       // Ordenar por fecha descendente
-      formatted.sort((a: any, b: any) => new Date(b.reportDate).getTime() - new Date(a.reportDate).getTime());
+      formatted.sort((a: MockReport, b: MockReport) => new Date(b.reportDate).getTime() - new Date(a.reportDate).getTime());
       setReports(formatted);
-    } catch (err: any) {
+    } catch {
       toast.error('Error al cargar la lista de alertas sanitarias.');
     } finally {
       setLoadingReports(false);
@@ -124,8 +135,11 @@ export const ManagerDashboard: React.FC = () => {
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchSuppliers(0);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchIngredients();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchReports();
   }, []);
 
@@ -148,8 +162,9 @@ export const ManagerDashboard: React.FC = () => {
       setSupplierEmail('');
       setIsSupplierModalOpen(false);
       fetchSuppliers(0);
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Error al crear el proveedor.');
+    } catch (err) {
+      const error = err as { response?: { data?: { message?: string } } };
+      toast.error(error.response?.data?.message || 'Error al crear el proveedor.');
     } finally {
       setCreatingSupplier(false);
     }
@@ -175,8 +190,9 @@ export const ManagerDashboard: React.FC = () => {
       setIngredientLife('');
       setIsIngredientModalOpen(false);
       fetchIngredients();
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Error al crear el ingrediente.');
+    } catch (err) {
+      const error = err as { response?: { data?: { message?: string } } };
+      toast.error(error.response?.data?.message || 'Error al crear el ingrediente.');
     } finally {
       setCreatingIngredient(false);
     }
@@ -201,8 +217,9 @@ export const ManagerDashboard: React.FC = () => {
         </div>,
         { duration: 5000 }
       );
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Error al retirar el lote.');
+    } catch (err) {
+      const error = err as { response?: { data?: { message?: string } } };
+      toast.error(error.response?.data?.message || 'Error al retirar el lote.');
     }
   };
 
@@ -221,7 +238,8 @@ export const ManagerDashboard: React.FC = () => {
     <div className="space-y-8">
       {/* Encabezado General del Manager Panel */}
       <Card className="glass-panel border-none p-6 shadow-2xl relative overflow-hidden flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
-        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary to-secondary" />
+        <div className="absolute top-0 left-0 right-0 h-1 bg-linear-to-r from-primary to-secondary" />
+
         <div>
           <h1 className="text-2xl font-bold text-white flex items-center gap-2">
             <Factory className="h-6 w-6 text-primary" />

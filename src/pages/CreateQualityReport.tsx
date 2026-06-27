@@ -27,7 +27,7 @@ export const CreateQualityReport: React.FC = () => {
         const response = await api.get(`/batches/${batchId}/traceability`);
         setBatchNumber(response.data.batchNumber);
         setProductName(response.data.productName);
-      } catch (err: any) {
+      } catch {
         toast.error('No se pudieron recuperar los detalles del lote a reportar.');
         navigate('/dashboard');
       } finally {
@@ -48,7 +48,7 @@ export const CreateQualityReport: React.FC = () => {
 
     try {
       setSubmitting(true);
-      const response = await api.post(`/batches/${batchId}/quality-reports`, {
+      await api.post(`/batches/${batchId}/quality-reports`, {
         title,
         description,
       });
@@ -62,12 +62,14 @@ export const CreateQualityReport: React.FC = () => {
       );
       
       navigate(`/traceability/${batchId}`);
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Error al enviar el reporte de calidad.');
+    } catch (err) {
+      const error = err as { response?: { data?: { message?: string } } };
+      toast.error(error.response?.data?.message || 'Error al enviar el reporte de calidad.');
     } finally {
       setSubmitting(false);
     }
   };
+
 
   if (loadingBatch) {
     return (
