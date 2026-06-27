@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Dumbbell, Loader2, Lock, User } from 'lucide-react';
+import { Dumbbell, Loader2, Lock, User, Eye, EyeOff } from 'lucide-react';
 
 export const Login: React.FC = () => {
   const { login } = useAuthStore();
@@ -14,6 +14,7 @@ export const Login: React.FC = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -73,7 +74,7 @@ export const Login: React.FC = () => {
                 <User className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
                 <Input
                   type="text"
-                  placeholder="ej. victor.fitness"
+                  placeholder="victor.fitness"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   className="bg-white/5 border-white/10 text-white pl-10 focus:border-primary focus:ring-1 focus:ring-primary"
@@ -89,13 +90,20 @@ export const Login: React.FC = () => {
               <div className="relative">
                 <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
                 <Input
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="bg-white/5 border-white/10 text-white pl-10 focus:border-primary focus:ring-1 focus:ring-primary"
+                  className="bg-white/5 border-white/10 text-white pl-10 pr-10 focus:border-primary focus:ring-1 focus:ring-primary"
                   disabled={loading}
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-3 text-gray-500 hover:text-white transition-colors"
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
               </div>
             </div>
 
@@ -123,12 +131,10 @@ export const Login: React.FC = () => {
               Regístrate aquí
             </Link>
           </p>
-          <p className="text-[10px] text-gray-500 mt-2">
-            Acceso demo manager: admin / StrongPassword123!
-          </p>
         </CardFooter>
       </Card>
     </div>
   );
 };
 export default Login;
+
