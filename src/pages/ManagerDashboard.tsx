@@ -65,29 +65,9 @@ export const ManagerDashboard: React.FC = () => {
   const [creatingIngredient, setCreatingIngredient] = useState(false);
   const [isIngredientModalOpen, setIsIngredientModalOpen] = useState(false);
 
-  // Reportes de Calidad (Mockeado en base de datos local / estado)
-  const [reports, setReports] = useState<MockReport[]>([
-    {
-      id: 89,
-      batchId: 1,
-      batchNumber: 'W-ISO-099',
-      productName: 'Ultra Whey Isolada',
-      title: 'Presencia de partículas oscuras en el polvo',
-      description: 'Al abrir el sello hermético se visualizan impurezas negras flotando.',
-      reportDate: '2026-06-14T19:35:00',
-      status: 'PENDING',
-    },
-    {
-      id: 90,
-      batchId: 2,
-      batchNumber: 'CRE-202',
-      productName: 'Creatina Monohidratada Pure',
-      title: 'Sabor químico inusual',
-      description: 'Tiene un sabor excesivamente amargo y metálico que no coincide con compras anteriores.',
-      reportDate: '2026-06-14T20:10:00',
-      status: 'PENDING',
-    }
-  ]);
+  // Reportes de Calidad
+  const [reports, setReports] = useState<MockReport[]>([]);
+  const [loadingReports, setLoadingReports] = useState(true);
 
   const fetchSuppliers = async (page = 0) => {
     try {
@@ -119,9 +99,34 @@ export const ManagerDashboard: React.FC = () => {
     }
   };
 
+  const fetchReports = async () => {
+    try {
+      setLoadingReports(true);
+      const response = await api.get('/batches/quality-reports');
+      const formatted = response.data.map((r: any) => ({
+        id: r.reportId,
+        batchId: r.batchId,
+        batchNumber: r.batchNumber,
+        productName: r.productName,
+        title: r.title,
+        description: r.description,
+        reportDate: r.reportDate,
+        status: r.status,
+      }));
+      // Ordenar por fecha descendente
+      formatted.sort((a: any, b: any) => new Date(b.reportDate).getTime() - new Date(a.reportDate).getTime());
+      setReports(formatted);
+    } catch (err: any) {
+      toast.error('Error al cargar la lista de alertas sanitarias.');
+    } finally {
+      setLoadingReports(false);
+    }
+  };
+
   useEffect(() => {
     fetchSuppliers(0);
     fetchIngredients();
+    fetchReports();
   }, []);
 
   const handleCreateSupplier = async (e: React.FormEvent) => {
@@ -249,43 +254,49 @@ export const ManagerDashboard: React.FC = () => {
           </CardHeader>
 
           <div className="space-y-4 mt-2">
-            {reports.map((report) => (
-              <div 
-                key={report.id} 
-                className={`p-4 rounded-xl border flex flex-col justify-between gap-4 ${
-                  report.status === 'PENDING' 
-                    ? 'bg-amber-950/10 border-amber-900/50' 
-                    : 'bg-rose-950/10 border-rose-900/50'
-                }`}
-              >
-                <div className="flex justify-between items-start gap-2">
-                  <div>
-                    <h4 className="font-bold text-white text-sm">{report.title}</h4>
-                    <p className="text-xs text-gray-400">Lote: <strong className="text-gray-200">{report.batchNumber}</strong> ({report.productName})</p>
-                    <p className="text-xs text-gray-500 mt-1">{report.description}</p>
+            {loadingReports ? (
+              <p className="text-xs text-gray-400">Cargando alertas de calidad...</p>
+            ) : reports.length === 0 ? (
+              <p className="text-xs text-gray-400">No hay alertas sanitarias ni de calidad registradas.</p>
+            ) : (
+              reports.map((report) => (
+                <div 
+                  key={report.id} 
+                  className={`p-4 rounded-xl border flex flex-col justify-between gap-4 ${
+                    report.status === 'PENDING' 
+                      ? 'bg-amber-950/10 border-amber-900/50' 
+                      : 'bg-rose-950/10 border-rose-900/50'
+                  }`}
+                >
+                  <div className="flex justify-between items-start gap-2">
+                    <div>
+                      <h4 className="font-bold text-white text-sm">{report.title}</h4>
+                      <p className="text-xs text-gray-400">Lote: <strong className="text-gray-200">{report.batchNumber}</strong> ({report.productName})</p>
+                      <p className="text-xs text-gray-500 mt-1 whitespace-pre-line">{report.description}</p>
+                    </div>
+                    <Badge variant={report.status === 'PENDING' ? 'outline' : 'destructive'} className="shrink-0 uppercase font-bold text-[10px]">
+                      {report.status === 'PENDING' ? 'Pendiente' : 'Lote Bloqueado'}
+                    </Badge>
                   </div>
-                  <Badge variant={report.status === 'PENDING' ? 'outline' : 'destructive'} className="shrink-0 uppercase font-bold text-[10px]">
-                    {report.status === 'PENDING' ? 'Pendiente' : 'Lote Bloqueado'}
-                  </Badge>
-                </div>
 
-                <div className="flex justify-between items-center border-t border-white/5 pt-3 mt-1">
-                  <span className="text-[10px] text-gray-500">Reportado: {new Date(report.reportDate).toLocaleDateString()}</span>
-                  
-                  {report.status === 'PENDING' && (
-                    <Button 
-                      size="sm"
-                      variant="destructive"
-                      className="text-xs font-bold"
-                      onClick={() => handleRecallBatch(report.id, report.batchId, report.batchNumber)}
-                      disabled={!isAdmin}
-                    >
-                      {!isAdmin ? 'Solo Admin' : 'Retirar Lote (Recall)'}
-                    </Button>
-                  )}
+                  <div className="flex justify-between items-center border-t border-white/5 pt-3 mt-1">
+                    <span className="text-[10px] text-gray-500">Reportado: {new Date(report.reportDate).toLocaleDateString()}</span>
+                    
+                    {report.status === 'PENDING' && (
+                      <Button 
+                        size="sm"
+                        variant="destructive"
+                        className="text-xs font-bold"
+                        onClick={() => handleRecallBatch(report.id, report.batchId, report.batchNumber)}
+                        disabled={!isAdmin}
+                      >
+                        {!isAdmin ? 'Solo Admin' : 'Retirar Lote (Recall)'}
+                      </Button>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </Card>
 
