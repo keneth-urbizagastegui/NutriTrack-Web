@@ -62,6 +62,8 @@ export const UserDashboard: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [activeBatches, setActiveBatches] = useState<ActiveBatch[]>([]);
   const [loadingBatches, setLoadingBatches] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState('');
+  const [defaultProducts, setDefaultProducts] = useState<Product[]>([]);
 
   const fetchActiveBatches = async () => {
     try {
@@ -72,6 +74,17 @@ export const UserDashboard: React.FC = () => {
       toast.error('Error al cargar la lista de lotes activos.');
     } finally {
       setLoadingBatches(false);
+    }
+  };
+
+  const fetchDefaultProducts = async () => {
+    try {
+      const response = await api.get('/products', {
+        params: { page: 0, size: 5, sort: 'name,asc' }
+      });
+      setDefaultProducts(response.data.content);
+    } catch {
+      // Error silencioso
     }
   };
 
@@ -134,6 +147,8 @@ export const UserDashboard: React.FC = () => {
     if (saved) {
       setAllergens(JSON.parse(saved));
     }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchDefaultProducts();
   }, []);
 
   useEffect(() => {
@@ -228,6 +243,8 @@ export const UserDashboard: React.FC = () => {
     return null;
   };
 
+  const uniqueProductsWithBatches = Array.from(new Set(activeBatches.map(b => b.productName))).sort();
+
   return (
     <div className="space-y-8">
       {/* Panel de Resumen Diario con Gráfico Circular SVG */}
@@ -288,13 +305,20 @@ export const UserDashboard: React.FC = () => {
         {/* Acceso Rápido: Registrar Consumo */}
         <Card className="glass-panel border-none p-6 flex flex-col justify-center items-center text-center shadow-2xl relative overflow-hidden transition-all duration-200 hover:border-white/10">
           <div className="absolute top-0 right-0 w-24 h-24 bg-primary/10 rounded-full blur-2xl" />
-          <h3 className="text-lg font-bold text-white mb-2">¿Escaneaste un lote?</h3>
+          <h3 className="text-lg font-bold text-white mb-2">Registrar Consumo Diario</h3>
           <p className="text-xs text-gray-400 mb-6">
-            Registra tu ingesta ingresando el ID del lote impreso en el QR del producto.
+            Registra los gramos que vas a ingerir de tus suplementos o alimentos trazados.
           </p>
-          <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+          <Dialog open={isModalOpen} onOpenChange={(open) => {
+            setIsModalOpen(open);
+            if (!open) {
+              setSelectedProduct('');
+              setBatchId('');
+              setQuantityGrams('');
+            }
+          }}>
             <DialogTrigger asChild>
-              <Button className="w-full bg-primary hover:bg-emerald-600 text-white font-bold flex items-center gap-2 transition-all duration-200 hover:-translate-y-0.5">
+              <Button className="w-full bg-primary hover:bg-emerald-600 text-white font-bold flex items-center gap-2 transition-all duration-200 hover:-translate-y-0.5 cursor-pointer">
                 <PlusCircle className="h-5 w-5" />
                 Registrar Consumo
               </Button>
@@ -307,44 +331,76 @@ export const UserDashboard: React.FC = () => {
               </DialogHeader>
               <form onSubmit={handleRegisterConsumption} className="space-y-4 pt-4">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-gray-300">Seleccionar Producto y Lote</label>
+                  <label className="text-xs font-semibold text-gray-300">1. Seleccionar Producto</label>
                   {loadingBatches ? (
                     <div className="flex items-center gap-2 text-xs text-gray-400 py-2.5">
                       <span className="animate-spin rounded-full h-3.5 w-3.5 border-b border-primary"></span>
-                      Cargando lotes activos...
+                      Cargando catálogo...
                     </div>
                   ) : (
                     <select
-                      value={batchId}
-                      onChange={(e) => setBatchId(e.target.value)}
+                      value={selectedProduct}
+                      onChange={(e) => {
+                        setSelectedProduct(e.target.value);
+                        setBatchId('');
+                      }}
                       className="w-full bg-[#0a0f1d] border border-white/10 text-white rounded-lg p-2.5 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary focus:ring-offset-0 transition-colors cursor-pointer"
                       disabled={submitting}
                       required
                     >
-                      <option value="" className="text-gray-400">-- Selecciona un lote activo --</option>
-                      {activeBatches.map((batch) => (
-                        <option key={batch.id} value={batch.id} className="text-white bg-[#0a0f1d]">
-                          {batch.productName} (Lote: {batch.batchNumber})
+                      <option value="" className="text-gray-400">-- Selecciona un producto --</option>
+                      {uniqueProductsWithBatches.map((name) => (
+                        <option key={name} value={name} className="text-white bg-[#0a0f1d]">
+                          {name}
                         </option>
                       ))}
                     </select>
                   )}
                 </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-gray-300">2. Seleccionar Lote Activo</label>
+                  <select
+                    value={batchId}
+                    onChange={(e) => setBatchId(e.target.value)}
+                    className="w-full bg-[#0a0f1d] border border-white/10 text-white rounded-lg p-2.5 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary focus:ring-offset-0 transition-colors cursor-pointer disabled:opacity-50"
+                    disabled={submitting || !selectedProduct}
+                    required
+                  >
+                    <option value="" className="text-gray-400">
+                      {selectedProduct ? '-- Selecciona un lote activo --' : '-- Selecciona un producto primero --'}
+                    </option>
+                    {activeBatches
+                      .filter((batch) => batch.productName === selectedProduct)
+                      .map((batch) => (
+                        <option key={batch.id} value={batch.id} className="text-white bg-[#0a0f1d]">
+                          Lote: {batch.batchNumber}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold text-gray-300">Cantidad en gramos (g)</label>
-                  <Input
-                    type="number"
-                    placeholder="ej. 40"
-                    value={quantityGrams}
-                    onChange={(e) => setQuantityGrams(e.target.value)}
-                    className="bg-white/5 border-white/10 text-white focus:border-primary focus:ring-1 focus:ring-primary"
-                    disabled={submitting}
-                    required
-                  />
+                  <div className="relative flex items-center">
+                    <Input
+                      type="number"
+                      min="0.1"
+                      step="0.1"
+                      placeholder="ej. 40.0"
+                      value={quantityGrams}
+                      onChange={(e) => setQuantityGrams(e.target.value)}
+                      className="bg-white/5 border-white/10 text-white focus:border-primary focus:ring-1 focus:ring-primary w-full pr-10"
+                      disabled={submitting}
+                      required
+                    />
+                    <span className="absolute right-3 text-xs font-bold text-gray-500">g</span>
+                  </div>
                 </div>
+
                 <Button
                   type="submit"
-                  className="w-full bg-primary hover:bg-emerald-600 text-white font-bold mt-4"
+                  className="w-full bg-primary hover:bg-emerald-600 text-white font-bold mt-4 cursor-pointer"
                   disabled={submitting}
                 >
                   {submitting ? 'Guardando...' : 'Registrar Consumo'}
@@ -376,9 +432,9 @@ export const UserDashboard: React.FC = () => {
 
         {/* Resultados del Buscador */}
         {loadingProducts && <p className="text-xs text-gray-400 mt-4 animate-pulse">Buscando productos...</p>}
-        {products.length > 0 && (
+        {((searchTerm.trim() === '' ? defaultProducts : products).length > 0) && (
           <div className="mt-4 border border-white/5 rounded-lg overflow-hidden divide-y divide-white/5">
-            {products.map((prod) => {
+            {(searchTerm.trim() === '' ? defaultProducts : products).map((prod) => {
               const allergenWarning = getProductAllergenWarning(prod.name, prod.description);
               return (
                 <div key={prod.id} className="p-4 bg-white/5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:bg-white/10 transition-colors duration-200">
@@ -393,10 +449,23 @@ export const UserDashboard: React.FC = () => {
                     </div>
                     <p className="text-xs text-gray-400">{prod.brand} • {prod.category}</p>
                   </div>
-                  <div className="flex gap-3 text-xs">
-                    <Badge className="bg-emerald-950 text-emerald-300 border border-emerald-800">P: {prod.proteinPer100g}g</Badge>
-                    <Badge className="bg-cyan-950 text-cyan-300 border border-cyan-800">C: {prod.carbsPer100g}g</Badge>
-                    <Badge className="bg-amber-950 text-amber-300 border border-amber-800">G: {prod.fatPer100g}g</Badge>
+                  <div className="flex items-center gap-4">
+                    <div className="flex gap-2 text-xs">
+                      <Badge className="bg-emerald-950 text-emerald-300 border border-emerald-800">P: {prod.proteinPer100g}g</Badge>
+                      <Badge className="bg-cyan-950 text-cyan-300 border border-cyan-800">C: {prod.carbsPer100g}g</Badge>
+                      <Badge className="bg-amber-950 text-amber-300 border border-amber-800">G: {prod.fatPer100g}g</Badge>
+                    </div>
+                    <Button
+                      size="sm"
+                      className="bg-primary hover:bg-emerald-600 text-white font-bold text-xs px-2.5 py-1.5 rounded cursor-pointer transition-all duration-200 flex items-center gap-1"
+                      onClick={() => {
+                        setSelectedProduct(prod.name);
+                        setBatchId('');
+                        setIsModalOpen(true);
+                      }}
+                    >
+                      <PlusCircle className="h-3.5 w-3.5" /> Registrar Ingesta
+                    </Button>
                   </div>
                 </div>
               );

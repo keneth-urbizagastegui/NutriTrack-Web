@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ShieldAlert, User, Plus, AlertCircle } from 'lucide-react';
+import { ShieldAlert, User, Plus, AlertCircle, X } from 'lucide-react';
 
 interface Ingredient {
   id: number;
@@ -66,6 +66,24 @@ export const Profile: React.FC = () => {
     }
   };
 
+  const handleRemoveAllergen = async (allergenId: number, allergenName: string) => {
+    try {
+      setSavingId(allergenId);
+      await api.delete(`/users/allergens/${allergenId}`);
+      
+      const updatedAllergens = sessionAllergens.filter((a) => a.id !== allergenId);
+      setSessionAllergens(updatedAllergens);
+      sessionStorage.setItem('sessionAllergens', JSON.stringify(updatedAllergens));
+      
+      toast.success(`"${allergenName}" eliminado de tus alérgenos.`);
+    } catch (err) {
+      const error = err as { response?: { data?: { message?: string } } };
+      toast.error(error.response?.data?.message || 'Error al eliminar el alérgeno.');
+    } finally {
+      setSavingId(null);
+    }
+  };
+
   const handleClearAllergens = () => {
     setSessionAllergens([]);
     sessionStorage.removeItem('sessionAllergens');
@@ -105,8 +123,19 @@ export const Profile: React.FC = () => {
             <div className="flex flex-wrap gap-2 mt-2">
               {sessionAllergens.length > 0 ? (
                 sessionAllergens.map((alg) => (
-                  <Badge key={alg.id} className="bg-rose-600 hover:bg-rose-700 text-white border-none uppercase font-black px-3 py-1.5 text-[10px] rounded-lg tracking-wider transition-all duration-200">
-                    {alg.name}
+                  <Badge 
+                    key={alg.id} 
+                    className="bg-rose-600 hover:bg-rose-700 text-white border-none uppercase font-black pl-3 pr-2 py-1.5 text-[10px] rounded-lg tracking-wider transition-all duration-200 flex items-center gap-1.5"
+                  >
+                    <span>{alg.name}</span>
+                    <button 
+                      onClick={() => handleRemoveAllergen(alg.id, alg.name)}
+                      className="text-white/60 hover:text-white transition-colors duration-150 p-0.5 hover:bg-white/10 rounded cursor-pointer"
+                      title="Eliminar alérgeno"
+                      disabled={savingId === alg.id}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
                   </Badge>
                 ))
               ) : (
@@ -127,6 +156,7 @@ export const Profile: React.FC = () => {
             </Button>
           )}
         </Card>
+
 
         {/* Buscador/Selector de Ingredientes */}
         <Card className="glass-panel border-none p-6 shadow-xl md:col-span-2 transition-all duration-200 hover:border-white/10">
