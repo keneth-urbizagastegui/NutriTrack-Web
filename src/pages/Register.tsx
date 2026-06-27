@@ -89,7 +89,6 @@ export const Register: React.FC = () => {
                   onChange={(e) => setUsername(e.target.value)}
                   className="bg-white/5 border-white/10 text-white pl-10 focus:border-primary focus:ring-1 focus:ring-primary"
                   disabled={loading}
-                  required
                 />
               </div>
             </div>
@@ -105,7 +104,6 @@ export const Register: React.FC = () => {
                   onChange={(e) => setEmail(e.target.value)}
                   className="bg-white/5 border-white/10 text-white pl-10 focus:border-primary focus:ring-1 focus:ring-primary"
                   disabled={loading}
-                  required
                 />
               </div>
             </div>
@@ -121,7 +119,6 @@ export const Register: React.FC = () => {
                   onChange={(e) => setPassword(e.target.value)}
                   className="bg-white/5 border-white/10 text-white pl-10 pr-10 focus:border-primary focus:ring-1 focus:ring-primary"
                   disabled={loading}
-                  required
                 />
                 <button
                   type="button"
@@ -144,7 +141,6 @@ export const Register: React.FC = () => {
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   className="bg-white/5 border-white/10 text-white pl-10 pr-10 focus:border-primary focus:ring-1 focus:ring-primary"
                   disabled={loading}
-                  required
                 />
                 <button
                   type="button"
