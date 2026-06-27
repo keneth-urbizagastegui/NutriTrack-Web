@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { api } from '../services/api';
 import { useDebounce } from '../hooks/useDebounce';
 import { toast } from 'sonner';
@@ -7,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { PlusCircle, Search, Dumbbell, Calendar, Flame, ChevronLeft, ChevronRight, Activity, AlertTriangle, Lock } from 'lucide-react';
+import { PlusCircle, Search, Dumbbell, Calendar, Flame, ChevronLeft, ChevronRight, Activity, AlertTriangle, Lock, Eye } from 'lucide-react';
 
 interface ConsumptionLog {
   id: number;
@@ -19,6 +20,7 @@ interface ConsumptionLog {
     carbs: number;
     fat: number;
   };
+  batchId: number;
 }
 
 interface Product {
@@ -140,16 +142,13 @@ export const UserDashboard: React.FC = () => {
   };
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchHistory(0);
     // Cargar alérgenos guardados en la sesión
     const saved = sessionStorage.getItem('sessionAllergens');
     if (saved) {
       setAllergens(JSON.parse(saved));
     }
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchDefaultProducts();
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchActiveBatches();
   }, []);
 
