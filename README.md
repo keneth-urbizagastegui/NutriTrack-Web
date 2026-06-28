@@ -169,3 +169,15 @@ El frontend cuenta con configuraciones dinámicas basadas en variables de entorn
 
 ## Conclusiones
 La combinación de **React + TypeScript + Zustand** con la infraestructura del backend en **Spring Boot** ha permitido construir una plataforma de alta fidelidad. La capa web es rápida, consume pocos recursos y garantiza la robustez y seguridad del usuario al interactuar con el flujo de trazabilidad.
+
+---
+
+## Despliegue en Vercel
+
+Para desplegar la aplicación frontend en Vercel de forma rápida y sencilla:
+
+1. **Vincular Repositorio**: Conecta tu repositorio de GitHub a tu cuenta de Vercel.
+2. **Configuración de Carpeta Raíz**: Configura la subcarpeta `NutriTrack Web` como el directorio raíz (*Root Directory*) del proyecto.
+3. **Variables de Entorno**: Agrega la siguiente variable de entorno en la consola de Vercel:
+   * `VITE_API_URL`: `https://nu-3303b52537654fe08cbbab1f5ab461ab.ecs.us-east-1.on.aws/api/v1` *(URL de tu backend en AWS)*
+4. **Desplegar**: Haz clic en **Deploy**. Vercel compilará la aplicación automáticamente y aplicará la regla de reescritura de rutas configurada en `vercel.json` para gestionar el enrutamiento interno de React Router de forma segura.
