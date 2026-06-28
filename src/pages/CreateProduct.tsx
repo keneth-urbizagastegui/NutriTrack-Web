@@ -126,13 +126,13 @@ export const CreateProduct: React.FC = () => {
                 <select
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
-                  className="w-full bg-white/5 border border-white/10 text-white rounded-lg p-2.5 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary focus:ring-offset-0 transition-colors"
+                  className="w-full bg-slate-900 border border-white/10 text-white rounded-lg p-2.5 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary focus:ring-offset-0 transition-colors"
                   disabled={submitting}
                   required
                 >
-                  <option value="SUPPLEMENT">Suplemento</option>
-                  <option value="READY_MEAL">Comida Preparada</option>
-                  <option value="BEVERAGE">Bebida Deportiva</option>
+                  <option value="SUPPLEMENT" className="bg-[#0b1329] text-white">Suplemento</option>
+                  <option value="READY_MEAL" className="bg-[#0b1329] text-white">Comida Preparada</option>
+                  <option value="BEVERAGE" className="bg-[#0b1329] text-white">Bebida Deportiva</option>
                 </select>
               </div>
               <div className="space-y-1.5">

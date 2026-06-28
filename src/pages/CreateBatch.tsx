@@ -342,9 +342,9 @@ export const CreateBatch: React.FC = () => {
                       disabled={linking}
                       required
                     >
-                      <option value="">Selecciona ingrediente...</option>
+                      <option value="" className="bg-[#0b1329] text-white">Selecciona ingrediente...</option>
                       {ingredients.map(i => (
-                        <option key={i.id} value={i.id}>{i.name}</option>
+                        <option key={i.id} value={i.id} className="bg-[#0b1329] text-white">{i.name}</option>
                       ))}
                     </select>
                   </div>
@@ -358,9 +358,9 @@ export const CreateBatch: React.FC = () => {
                       disabled={linking}
                       required
                     >
-                      <option value="">Selecciona proveedor...</option>
+                      <option value="" className="bg-[#0b1329] text-white">Selecciona proveedor...</option>
                       {suppliers.map(s => (
-                        <option key={s.id} value={s.id}>{s.name}</option>
+                        <option key={s.id} value={s.id} className="bg-[#0b1329] text-white">{s.name}</option>
                       ))}
                     </select>
                   </div>
