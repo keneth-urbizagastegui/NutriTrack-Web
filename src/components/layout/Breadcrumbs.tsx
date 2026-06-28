@@ -24,8 +24,8 @@ export const Breadcrumbs: React.FC = () => {
     admin: 'Panel Admin'
   };
 
-  // Rutas intermedias que no deben ser clickeables por no tener páginas individuales independientes
-  const nonClickablePaths = new Set(['traceability', 'quality-reports']);
+  // Rutas válidas del router que pueden servir como destinos clickeables
+  const clickablePaths = new Set(['products', 'admin', 'manager', 'dashboard', 'profile']);
 
   return (
     <nav className="flex items-center space-x-2 text-sm text-gray-400 py-3 px-6 bg-white/5 border-b border-white/5 shadow-inner">
@@ -38,7 +38,7 @@ export const Breadcrumbs: React.FC = () => {
         
         // Si el valor es numérico (ID de lote/producto), lo mostramos como ID o Código
         const displayName = routeMap[value] || (isNaN(Number(value)) ? value : `#${value}`);
-        const shouldBeClickable = !isLast && !nonClickablePaths.has(value);
+        const shouldBeClickable = !isLast && clickablePaths.has(value);
 
         return (
           <React.Fragment key={to}>
