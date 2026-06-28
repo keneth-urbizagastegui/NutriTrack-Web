@@ -381,7 +381,8 @@ export const UserDashboard: React.FC = () => {
               disabled={submitting}
             >
               {submitting ? 'Guardando Consumo...' : 'Confirmar y Registrar'}
-               </form>
+            </Button>
+          </form>
         </DialogContent>
       </Dialog>
 
