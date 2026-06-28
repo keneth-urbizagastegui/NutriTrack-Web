@@ -65,7 +65,8 @@ export const UserDashboard: React.FC = () => {
   const [activeBatches, setActiveBatches] = useState<ActiveBatch[]>([]);
   const [loadingBatches, setLoadingBatches] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState('');
-  const [defaultProducts, setDefaultProducts] = useState<Product[]>([]);
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
+  const [activeOnly, setActiveOnly] = useState(true);
 
   const fetchActiveBatches = async () => {
     try {
@@ -79,21 +80,22 @@ export const UserDashboard: React.FC = () => {
     }
   };
 
-  const fetchDefaultProducts = async () => {
+  const fetchAllProducts = async () => {
     try {
+      setLoadingProducts(true);
       const response = await api.get('/products', {
-        params: { page: 0, size: 5, sort: 'name,asc' }
+        params: { page: 0, size: 100, sort: 'name,asc' }
       });
-      setDefaultProducts(response.data.content);
+      setAllProducts(response.data.content);
     } catch {
-      // Error silencioso
+      toast.error('Error al cargar el catálogo de productos.');
+    } finally {
+      setLoadingProducts(false);
     }
   };
 
   // Estados para Buscador de Productos
   const [searchTerm, setSearchTerm] = useState('');
-  const debouncedSearch = useDebounce(searchTerm, 300);
-  const [products, setProducts] = useState<Product[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
 
   // Lista local de alérgenos activos para búsquedas proactivas
@@ -148,32 +150,9 @@ export const UserDashboard: React.FC = () => {
     if (saved) {
       setAllergens(JSON.parse(saved));
     }
-    fetchDefaultProducts();
+    fetchAllProducts();
     fetchActiveBatches();
   }, []);
-
-  // Buscador de productos
-  useEffect(() => {
-    const searchProducts = async () => {
-      if (!debouncedSearch.trim()) {
-        setProducts([]);
-        return;
-      }
-      try {
-        setLoadingProducts(true);
-        const response = await api.get('/products', {
-          params: { name: debouncedSearch, page: 0, size: 5 },
-        });
-        setProducts(response.data.content);
-      } catch {
-        // Error silencioso en búsqueda
-      } finally {
-        setLoadingProducts(false);
-      }
-    };
-    searchProducts();
-  }, [debouncedSearch]);
-
 
   const handleRegisterConsumption = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -425,10 +404,7 @@ export const UserDashboard: React.FC = () => {
               </form>
             </DialogContent>
           </Dialog>
-        </Card>
-      </div>
-
-      {/* Buscador de Catálogo de Productos */}
+        </Card>      {/* Buscador de Catálogo de Productos */}
       <Card className="glass-panel border-none p-6 shadow-2xl transition-all duration-200 hover:border-white/10">
         <CardHeader className="px-0 pt-0">
           <CardTitle className="text-lg font-bold text-white">Buscador de Suplementos y Alimentos</CardTitle>
@@ -436,79 +412,119 @@ export const UserDashboard: React.FC = () => {
             Busca y consulta el valor de tu producto, inspecciona su trazabilidad o registra tu consumo al instante
           </CardDescription>
         </CardHeader>
-        <div className="relative group mb-6">
-          <Search className="absolute left-4 top-3 h-4 w-4 text-gray-400 group-hover:text-primary transition-colors" />
-          <Input
-            type="text"
-            placeholder="Buscar por nombre de producto (ej. Proteína, Avena, Wild)..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="bg-white/5 border-white/10 text-white pl-11 pr-4 focus:border-primary focus:ring-1 focus:ring-primary placeholder:text-gray-400 transition-all duration-200"
-          />
+        
+        {/* Controles de Búsqueda y Filtro */}
+        <div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center justify-between mb-6">
+          <div className="relative group flex-1">
+            <Search className="absolute left-4 top-3 h-4 w-4 text-gray-400 group-hover:text-primary transition-colors" />
+            <Input
+              type="text"
+              placeholder="Buscar por nombre de producto, marca o categoría (ej. Proteína, Avena, Wild)..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="bg-white/5 border-white/10 text-white pl-11 pr-4 focus:border-primary focus:ring-1 focus:ring-primary placeholder:text-gray-400 transition-all duration-200"
+            />
+          </div>
+          
+          <label className="flex items-center gap-2 text-xs font-semibold text-gray-300 cursor-pointer select-none bg-white/5 border border-white/10 px-4 py-3 rounded-lg hover:bg-white/10 transition-colors">
+            <input
+              type="checkbox"
+              checked={activeOnly}
+              onChange={(e) => setActiveOnly(e.target.checked)}
+              className="accent-primary h-4 w-4 rounded cursor-pointer"
+            />
+            <span>Solo productos con lotes activos</span>
+          </label>
         </div>
 
         {/* Resultados del Buscador */}
-        {loadingProducts && <p className="text-xs text-gray-400 animate-pulse mb-4">Buscando productos...</p>}
-        {((searchTerm.trim() === '' ? defaultProducts : products).length > 0) && (
-          <div className="space-y-3.5">
-            {(searchTerm.trim() === '' ? defaultProducts : products).map((prod) => {
-              const allergenWarning = getProductAllergenWarning(prod.name, prod.description);
-              const activeBatch = activeBatches.find(b => b.productName === prod.name);
-              
-              return (
-                <div key={prod.id} className="p-4 bg-white/5 border border-white/5 rounded-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4 hover:bg-white/10 hover:border-white/10 transition-all duration-200 shadow-md">
-                  <div className="space-y-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h4 className="font-bold text-white text-sm tracking-wide">{prod.name}</h4>
-                      {allergenWarning && (
-                        <Badge className="bg-rose-500/20 text-rose-300 border border-rose-500/30 text-[9px] font-black flex items-center gap-1 py-0.5 px-2">
-                          <AlertTriangle className="h-3 w-3 text-rose-400 animate-pulse" /> Contiene: {allergenWarning}
-                        </Badge>
-                      )}
-                    </div>
-                    <p className="text-xs text-gray-400">{prod.brand} • <span className="text-primary font-medium">{prod.category}</span></p>
-                  </div>
-                  
-                  <div className="flex flex-wrap items-center gap-4 w-full md:w-auto justify-between md:justify-end">
-                    <div className="flex gap-1.5 text-[10px] font-bold">
-                      <Badge className="bg-emerald-950/60 text-emerald-300 border border-emerald-800/40">P: {prod.proteinPer100g}g</Badge>
-                      <Badge className="bg-cyan-950/60 text-cyan-300 border border-cyan-800/40">C: {prod.carbsPer100g}g</Badge>
-                      <Badge className="bg-amber-950/60 text-amber-300 border border-amber-800/40">G: {prod.fatPer100g}g</Badge>
+        {loadingProducts ? (
+          <p className="text-xs text-gray-400 animate-pulse py-4">Cargando catálogo de productos...</p>
+        ) : (() => {
+          const filteredProducts = allProducts.filter((prod) => {
+            const term = searchTerm.trim().toLowerCase();
+            const matchesSearch = !term ||
+              prod.name.toLowerCase().includes(term) ||
+              prod.brand.toLowerCase().includes(term) ||
+              prod.category.toLowerCase().includes(term);
+
+            const hasActiveBatch = activeBatches.some(b => b.productName === prod.name);
+            const matchesActiveOnly = !activeOnly || hasActiveBatch;
+
+            return matchesSearch && matchesActiveOnly;
+          });
+
+          return filteredProducts.length > 0 ? (
+            <div className="space-y-3.5">
+              {filteredProducts.map((prod) => {
+                const allergenWarning = getProductAllergenWarning(prod.name, prod.description);
+                const activeBatch = activeBatches.find(b => b.productName === prod.name);
+                
+                return (
+                  <div key={prod.id} className="p-4 bg-white/5 border border-white/5 rounded-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4 hover:bg-white/10 hover:border-white/10 transition-all duration-200 shadow-md">
+                    <div className="space-y-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h4 className="font-bold text-white text-sm tracking-wide">{prod.name}</h4>
+                        {allergenWarning && (
+                          <Badge className="bg-rose-500/20 text-rose-300 border border-rose-500/30 text-[9px] font-black flex items-center gap-1 py-0.5 px-2">
+                            <AlertTriangle className="h-3 w-3 text-rose-400 animate-pulse" /> Contiene: {allergenWarning}
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-400">{prod.brand} • <span className="text-primary font-medium">{prod.category}</span></p>
                     </div>
                     
-                    <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-                      {activeBatch ? (
-                        <>
-                          <Button
-                            onClick={() => handleOpenRegisterForProduct(prod.name, activeBatch.id)}
-                            size="sm"
-                            className="bg-primary hover:bg-emerald-600 text-white font-bold text-xs px-3 py-1.5 rounded-lg cursor-pointer transition-all duration-150 flex items-center gap-1"
-                          >
-                            <PlusCircle className="h-3.5 w-3.5" /> Registrar Consumo
-                          </Button>
-                          <Button
-                            asChild
-                            size="sm"
-                            variant="outline"
-                            className="border-cyan-500/30 text-cyan-400 hover:bg-cyan-950/40 hover:text-cyan-300 font-bold text-xs px-3 py-1.5 rounded-lg cursor-pointer transition-all duration-150 flex items-center gap-1"
-                          >
-                            <Link to={`/traceability/${activeBatch.id}`}>
-                              <Eye className="h-3.5 w-3.5" /> Ver Trazabilidad
-                            </Link>
-                          </Button>
-                        </>
-                      ) : (
-                        <Badge variant="outline" className="text-gray-500 border-white/5 bg-white/2 text-[10px] py-1 px-2.5 rounded-lg">
-                          Sin Lotes Activos (No Registrable)
-                        </Badge>
-                      )}
+                    <div className="flex flex-wrap items-center gap-4 w-full md:w-auto justify-between md:justify-end">
+                      <div className="flex gap-1.5 text-[10px] font-bold">
+                        <Badge className="bg-emerald-950/60 text-emerald-300 border border-emerald-800/40">P: {prod.proteinPer100g}g</Badge>
+                        <Badge className="bg-cyan-950/60 text-cyan-300 border border-cyan-800/40">C: {prod.carbsPer100g}g</Badge>
+                        <Badge className="bg-amber-950/60 text-amber-300 border border-amber-800/40">G: {prod.fatPer100g}g</Badge>
+                      </div>
+                      
+                      <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                        {activeBatch ? (
+                          <>
+                            <Button
+                              onClick={() => handleOpenRegisterForProduct(prod.name, activeBatch.id)}
+                              size="sm"
+                              className="bg-primary hover:bg-emerald-600 text-white font-bold text-xs px-3 py-1.5 rounded-lg cursor-pointer transition-all duration-150 flex items-center gap-1"
+                            >
+                              <PlusCircle className="h-3.5 w-3.5" /> Registrar Consumo
+                            </Button>
+                            <Button
+                              asChild
+                              size="sm"
+                              variant="outline"
+                              className="border-cyan-500/30 text-cyan-400 hover:bg-cyan-950/40 hover:text-cyan-300 font-bold text-xs px-3 py-1.5 rounded-lg cursor-pointer transition-all duration-150 flex items-center gap-1"
+                            >
+                              <Link to={`/traceability/${activeBatch.id}`}>
+                                <Eye className="h-3.5 w-3.5" /> Ver Trazabilidad
+                              </Link>
+                            </Button>
+                          </>
+                        ) : (
+                          <Badge variant="outline" className="text-gray-500 border-white/5 bg-white/2 text-[10px] py-1 px-2.5 rounded-lg">
+                            Sin Lotes Activos (No Registrable)
+                          </Badge>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
+                );
+              })}
+            </div>
+          ) : (
+            <div className="text-center py-10 text-gray-400 border border-white/5 border-dashed rounded-xl bg-white/2">
+              <Search className="h-8 w-8 mx-auto text-gray-600 mb-2 stroke-[1.5]" />
+              <p className="text-sm font-semibold">No se encontraron productos.</p>
+              <p className="text-xs text-gray-500 mt-1">
+                {activeOnly 
+                  ? "Prueba desmarcando el filtro 'Solo productos con lotes activos' para ver el catálogo completo."
+                  : "Prueba buscando otra palabra clave."}
+              </p>
+            </div>
+          );
+        })()}
       </Card>
 
       {/* Historial de Consumos Paginado */}
@@ -541,7 +557,7 @@ export const UserDashboard: React.FC = () => {
                     <th className="p-4 text-center">Grasas</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/5">
+                <tbody className="divide-y divide-white/5">vide-y divide-white/5">
                   {history.map((log) => (
                     <tr key={log.id} className="odd:bg-white/2 even:bg-transparent hover:bg-white/5 transition-all duration-200 cursor-help" title="Registro de ingesta certificado e inmutable">
                       <td className="p-4 text-xs font-medium text-gray-400">
