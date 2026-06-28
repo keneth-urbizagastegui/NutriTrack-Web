@@ -122,9 +122,18 @@ export const UserDashboard: React.FC = () => {
       setTotalPages(response.data.totalPages);
       setCurrentPage(page);
 
-      // Calcular macros de hoy (consumos con fecha de hoy)
-      const today = new Date().toISOString().split('T')[0];
-      const todayConsumptions = response.data.content.filter((item: ConsumptionLog) => 
+      // Calcular macros de hoy (consumos con fecha de hoy en zona horaria local)
+      const allResponse = await api.get('/consumption', {
+        params: { page: 0, size: 1000, sort: 'consumptionDate,desc' }
+      });
+
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      const today = `${year}-${month}-${day}`;
+
+      const todayConsumptions = allResponse.data.content.filter((item: ConsumptionLog) => 
         item.consumptionDate.startsWith(today)
       );
 
