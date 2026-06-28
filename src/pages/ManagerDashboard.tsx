@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { 
   Factory, Layers, Users, PhoneCall, ChevronLeft, ChevronRight, 
-  PlusCircle, AlertTriangle, Eye, ShieldCheck, ClipboardList
+  PlusCircle, AlertTriangle, ShieldCheck, ClipboardList, MapPin
 } from 'lucide-react';
 
 interface Supplier {
@@ -17,6 +17,9 @@ interface Supplier {
   name: string;
   contactEmail: string;
   isActive: boolean;
+  address?: string;
+  latitude?: number;
+  longitude?: number;
 }
 
 interface Ingredient {
@@ -267,8 +270,13 @@ export const ManagerDashboard: React.FC = () => {
                     <div className="min-w-0">
                       <h5 className="font-bold text-white text-xs truncate">{s.name}</h5>
                       {s.contactEmail && (
-                        <span className="text-[10px] text-gray-500 block truncate flex items-center gap-1 mt-0.5">
+                        <span className="text-[10px] text-gray-500 truncate flex items-center gap-1 mt-0.5">
                           <PhoneCall className="h-3 w-3 text-cyan-500/60" /> {s.contactEmail}
+                        </span>
+                      )}
+                      {s.address && (
+                        <span className="text-[9px] text-gray-400 flex items-center gap-0.5 mt-0.5 truncate" title={s.address}>
+                          <MapPin className="h-3 w-3 shrink-0 text-cyan-500/60" /> {s.address}
                         </span>
                       )}
                     </div>
