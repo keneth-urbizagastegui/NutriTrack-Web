@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { 
   ShieldAlert, ShieldCheck, Factory, ToggleLeft, ToggleRight, 
   ChevronLeft, ChevronRight, Users, Activity, Lock, AlertTriangle, 
-  ShieldX, Eye, Shield, Key, Search, Mail, Calendar, EyeOff, Award
+  ShieldX, Eye, Shield, Key, Search, Mail, Calendar, EyeOff, Award, MapPin
 } from 'lucide-react';
 
 interface Supplier {
@@ -17,6 +17,9 @@ interface Supplier {
   name: string;
   contactEmail: string;
   isActive: boolean;
+  address?: string;
+  latitude?: number;
+  longitude?: number;
 }
 
 interface MockReport {
@@ -82,10 +85,14 @@ export const AdminDashboard: React.FC = () => {
   const [loadingSuppliers, setLoadingSuppliers] = useState(true);
   const [supplierPage, setSupplierPage] = useState(0);
   const [supplierTotalPages, setSupplierTotalPages] = useState(0);
+  const [totalActiveSuppliersCount, setTotalActiveSuppliersCount] = useState(0);
 
   // Registro de Proveedor
   const [supplierName, setSupplierName] = useState('');
   const [supplierEmail, setSupplierEmail] = useState('');
+  const [supplierAddress, setSupplierAddress] = useState('');
+  const [supplierLat, setSupplierLat] = useState('');
+  const [supplierLng, setSupplierLng] = useState('');
   const [creatingSupplier, setCreatingSupplier] = useState(false);
   const [isSupplierModalOpen, setIsSupplierModalOpen] = useState(false);
 
@@ -105,6 +112,10 @@ export const AdminDashboard: React.FC = () => {
   const [selectedUserDetail, setSelectedUserDetail] = useState<SeedUser | null>(null);
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
 
+  // Paginación de Usuarios (Client-Side)
+  const [usersPage, setUsersPage] = useState(0);
+  const usersPerPage = 5;
+
   const fetchSuppliers = async (page = 0) => {
     try {
       setLoadingSuppliers(true);
@@ -114,6 +125,13 @@ export const AdminDashboard: React.FC = () => {
       setSuppliers(response.data.content);
       setSupplierTotalPages(response.data.totalPages);
       setSupplierPage(page);
+
+      // Consulta de todos los proveedores para contabilizar los activos globalmente (sin límite de página)
+      const allResponse = await api.get('/suppliers', {
+        params: { page: 0, size: 1000 }
+      });
+      const activeCount = allResponse.data.content.filter((s: any) => s.isActive).length;
+      setTotalActiveSuppliersCount(activeCount);
     } catch {
       toast.error('Error al cargar la lista de proveedores.');
     } finally {
@@ -144,20 +162,6 @@ export const AdminDashboard: React.FC = () => {
     }
   };
 
-  const fetchTraceabilityAudit = async (batchId: number) => {
-    try {
-      setLoadingAudit(true);
-      setAuditData(null);
-      const response = await api.get(`/batches/${batchId}/traceability`);
-      setAuditData(response.data);
-    } catch {
-      toast.error('Error al auditar la trazabilidad de este lote.');
-      setIsAuditModalOpen(false);
-    } finally {
-      setLoadingAudit(false);
-    }
-  };
-
   const fetchUsers = async () => {
     try {
       setLoadingUsers(true);
@@ -173,10 +177,25 @@ export const AdminDashboard: React.FC = () => {
         lastLogin: u.username === 'admin' ? 'Hace 5 minutos' : (u.username === 'manager' ? 'Hace 2 horas' : 'Reciente')
       }));
       setSeedUsers(formatted);
+      setUsersPage(0); // Reiniciar paginación al recargar
     } catch {
       toast.error('Error al cargar la lista de usuarios desde el servidor.');
     } finally {
       setLoadingUsers(false);
+    }
+  };
+
+  const fetchTraceabilityAudit = async (batchId: number) => {
+    try {
+      setLoadingAudit(true);
+      setAuditData(null);
+      const response = await api.get(`/batches/${batchId}/traceability`);
+      setAuditData(response.data);
+    } catch {
+      toast.error('Error al auditar la trazabilidad de este lote.');
+      setIsAuditModalOpen(false);
+    } finally {
+      setLoadingAudit(false);
     }
   };
 
@@ -206,11 +225,17 @@ export const AdminDashboard: React.FC = () => {
       await api.post('/suppliers', {
         name: supplierName,
         contactEmail: supplierEmail,
-        isActive: true
+        isActive: true,
+        address: supplierAddress || null,
+        latitude: supplierLat ? Number(supplierLat) : null,
+        longitude: supplierLng ? Number(supplierLng) : null
       });
       toast.success('Proveedor homologado registrado correctamente.');
       setSupplierName('');
       setSupplierEmail('');
+      setSupplierAddress('');
+      setSupplierLat('');
+      setSupplierLng('');
       setIsSupplierModalOpen(false);
       fetchSuppliers(0);
     } catch (err) {
@@ -225,12 +250,16 @@ export const AdminDashboard: React.FC = () => {
     try {
       await api.post(`/batches/${batchId}/recall`);
       setReports(reports.map(r => r.id === reportId ? { ...r, status: 'RECALLED_BATCH' } : r));
+      
+      // Forzar recarga de contadores para que sume el lote retirado
+      fetchReports();
+
       toast.success(
         <div className="flex flex-col gap-1.5 text-xs">
           <span className="font-bold text-rose-500 flex items-center gap-1">
             <ShieldX className="h-4 w-4" /> Retiro del Mercado Exitoso
           </span>
-          <span>El lote <strong>{batchNumber}</strong> ha sido bloqueado preventivamente en el sistema.</span>
+          <span>El lote <strong>{batchNumber}</strong> ha sido bloqueado y retirado preventivamente de circulación.</span>
         </div>,
         { duration: 6000 }
       );
@@ -242,6 +271,10 @@ export const AdminDashboard: React.FC = () => {
 
   const handleToggleSupplier = (supplierId: number, name: string, currentState: boolean) => {
     setSuppliers(suppliers.map(s => s.id === supplierId ? { ...s, isActive: !currentState } : s));
+    
+    // Simular recalcular métrica
+    setTotalActiveSuppliersCount(prev => !currentState ? prev + 1 : prev - 1);
+
     toast.success(
       <div className="text-xs text-gray-300">
         Proveedor <strong className="text-white">{name}</strong> ha sido <strong>{!currentState ? 'HABILITADO' : 'DESACTIVADO'}</strong> correctamente.
@@ -268,7 +301,6 @@ export const AdminDashboard: React.FC = () => {
   // Cálculos de métricas
   const pendingAlertsCount = reports.filter(r => r.status === 'PENDING').length;
   const recalledBatchesCount = reports.filter(r => r.status === 'RECALLED_BATCH').length;
-  const activeSuppliersCount = suppliers.filter(s => s.isActive).length;
 
   const getFreshnessColor = (freshness: string) => {
     switch (freshness) {
@@ -278,6 +310,10 @@ export const AdminDashboard: React.FC = () => {
       default: return 'bg-slate-800 text-slate-300';
     }
   };
+
+  // Paginación clientes de usuarios
+  const usersTotalPages = Math.ceil(seedUsers.length / usersPerPage);
+  const paginatedUsers = seedUsers.slice(usersPage * usersPerPage, (usersPage + 1) * usersPerPage);
 
   return (
     <div className="space-y-8">
@@ -317,7 +353,7 @@ export const AdminDashboard: React.FC = () => {
           <div className="space-y-1">
             <span className="text-[10px] text-gray-400 font-extrabold uppercase tracking-widest">Lotes Retirados</span>
             <h3 className="text-3xl font-black text-white">{recalledBatchesCount}</h3>
-            <p className="text-[10px] text-rose-400/80 font-medium">Fuera de circulación (Recall)</p>
+            <p className="text-[10px] text-rose-400/80 font-medium font-bold">Fuera de circulación</p>
           </div>
           <div className="p-3 bg-rose-500/10 text-rose-500 rounded-xl border border-rose-500/10">
             <ShieldX className="h-6 w-6" />
@@ -327,7 +363,7 @@ export const AdminDashboard: React.FC = () => {
         <Card className="bg-white/2 border border-white/5 p-5 flex items-center justify-between shadow-xl rounded-2xl hover:border-rose-500/10 transition-all duration-200">
           <div className="space-y-1">
             <span className="text-[10px] text-gray-400 font-extrabold uppercase tracking-widest">Proveedores Activos</span>
-            <h3 className="text-3xl font-black text-white">{activeSuppliersCount}</h3>
+            <h3 className="text-3xl font-black text-white">{totalActiveSuppliersCount}</h3>
             <p className="text-[10px] text-emerald-400/80 font-medium">Homologados en la cadena</p>
           </div>
           <div className="p-3 bg-emerald-500/10 text-emerald-500 rounded-xl border border-emerald-500/10">
@@ -339,7 +375,7 @@ export const AdminDashboard: React.FC = () => {
       {/* Grid Principal */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {/* Buzón de Alertas y Recall */}
+        {/* Buzón de Alertas y Retiro Sanitario */}
         <Card className="glass-panel border-none p-6 shadow-xl lg:col-span-2">
           <CardHeader className="px-0 pt-0">
             <CardTitle className="text-lg font-bold text-white flex items-center gap-2">
@@ -408,11 +444,11 @@ export const AdminDashboard: React.FC = () => {
                           className="text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white rounded-lg transition-colors cursor-pointer"
                           onClick={() => handleRecallBatch(report.id, report.batchId, report.batchNumber)}
                         >
-                          Retirar Lote (Recall)
+                          Retirar Lote de Circulación
                         </Button>
                       ) : (
                         <Badge className="bg-rose-500/10 text-rose-400 border border-rose-500/20 text-[9px] font-black uppercase">
-                          Recall Completado
+                          Lote Bloqueado
                         </Badge>
                       )}
                     </div>
@@ -468,9 +504,43 @@ export const AdminDashboard: React.FC = () => {
                         className="bg-[#0a0f1d] border-white/10 text-white focus:border-primary focus:ring-1 focus:ring-primary rounded-lg"
                       />
                     </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-gray-300">Dirección Física (Fábrica)</label>
+                      <Input
+                        type="text"
+                        placeholder="Av. República de Panamá 2461, La Victoria, Lima"
+                        value={supplierAddress}
+                        onChange={(e) => setSupplierAddress(e.target.value)}
+                        className="bg-[#0a0f1d] border-white/10 text-white focus:border-primary focus:ring-1 focus:ring-primary rounded-lg"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-semibold text-gray-300">Latitud (GSP)</label>
+                        <Input
+                          type="number"
+                          step="any"
+                          placeholder="-12.0820"
+                          value={supplierLat}
+                          onChange={(e) => setSupplierLat(e.target.value)}
+                          className="bg-[#0a0f1d] border-white/10 text-white focus:border-primary focus:ring-1 focus:ring-primary rounded-lg"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-semibold text-gray-300">Longitud (GPS)</label>
+                        <Input
+                          type="number"
+                          step="any"
+                          placeholder="-77.0232"
+                          value={supplierLng}
+                          onChange={(e) => setSupplierLng(e.target.value)}
+                          className="bg-[#0a0f1d] border-white/10 text-white focus:border-primary focus:ring-1 focus:ring-primary rounded-lg"
+                        />
+                      </div>
+                    </div>
                     <Button 
                       type="submit" 
-                      className="w-full bg-primary hover:bg-emerald-600 text-white font-bold py-2 rounded-lg transition-colors cursor-pointer"
+                      className="w-full bg-primary hover:bg-emerald-600 text-white font-bold py-2 rounded-lg transition-colors cursor-pointer mt-2"
                       disabled={creatingSupplier}
                     >
                       {creatingSupplier ? 'Registrando...' : 'Registrar Homologado'}
@@ -491,10 +561,15 @@ export const AdminDashboard: React.FC = () => {
                     <div className="min-w-0">
                       <h5 className="font-bold text-white text-xs truncate">{s.name}</h5>
                       <span className="text-[10px] text-gray-500 block truncate">{s.contactEmail || 'Sin email'}</span>
+                      {s.address && (
+                        <span className="text-[9px] text-gray-400 flex items-center gap-0.5 mt-0.5 truncate" title={s.address}>
+                          <MapPin className="h-3 w-3 shrink-0 text-amber-500/70" /> {s.address}
+                        </span>
+                      )}
                     </div>
                     <button
                       onClick={() => handleToggleSupplier(s.id, s.name, s.isActive)}
-                      className="cursor-pointer text-gray-400 hover:text-white transition-colors"
+                      className="cursor-pointer text-gray-400 hover:text-white transition-colors shrink-0"
                       title={s.isActive ? "Desactivar proveedor" : "Activar proveedor"}
                     >
                       {s.isActive ? (
@@ -576,7 +651,7 @@ export const AdminDashboard: React.FC = () => {
                   </td>
                 </tr>
               ) : (
-                seedUsers.map((user) => (
+                paginatedUsers.map((user) => (
                   <tr key={user.id} className="hover:bg-white/2 transition-colors">
                     <td className="py-3.5 pr-4 font-bold text-white flex items-center gap-2">
                       <div className="h-6 w-6 rounded-full bg-white/5 flex items-center justify-center border border-white/10 text-[10px] font-bold text-primary">
@@ -635,6 +710,33 @@ export const AdminDashboard: React.FC = () => {
             </tbody>
           </table>
         </div>
+
+        {/* Paginación de Usuarios */}
+        {!loadingUsers && usersTotalPages > 1 && (
+          <div className="flex justify-between items-center mt-4 text-[10px] text-gray-400 pt-3 border-t border-white/5">
+            <span>Pág. {usersPage + 1} de {usersTotalPages} (Total: {seedUsers.length} cuentas)</span>
+            <div className="flex gap-1">
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 w-7 p-0 border-white/5 bg-white/2 hover:bg-white/5"
+                disabled={usersPage === 0}
+                onClick={() => setUsersPage(usersPage - 1)}
+              >
+                <ChevronLeft className="h-3 w-3" />
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 w-7 p-0 border-white/5 bg-white/2 hover:bg-white/5"
+                disabled={usersPage === usersTotalPages - 1}
+                onClick={() => setUsersPage(usersPage + 1)}
+              >
+                <ChevronRight className="h-3 w-3" />
+              </Button>
+            </div>
+          </div>
+        )}
       </Card>
 
       {/* Modal Traceability Audit (Inspección Interna de Lote) */}
@@ -672,7 +774,7 @@ export const AdminDashboard: React.FC = () => {
                 <div className="pt-2 border-t border-white/5">
                   <span className="text-[9px] uppercase tracking-wider text-gray-500 font-bold block mb-0.5">Estatus Sanitario</span>
                   <Badge className={`text-[9px] font-black uppercase mt-0.5 ${auditData.status === 'ACTIVE' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'}`}>
-                    {auditData.status === 'ACTIVE' ? 'Activo' : 'Retirado'}
+                    {auditData.status === 'ACTIVE' ? 'Activo' : 'Fuera de circulación'}
                   </Badge>
                 </div>
               </div>
