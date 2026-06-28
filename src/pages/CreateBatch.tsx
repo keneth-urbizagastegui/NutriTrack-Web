@@ -84,8 +84,10 @@ export const CreateBatch: React.FC = () => {
 
         const supRes = await api.get('/suppliers', { params: { size: 50 } });
         setSuppliers(supRes.data.content.filter((s: Supplier) => s.isActive));
-      } catch {
-        toast.error('Error al cargar datos base del lote.');
+      } catch (err) {
+        const error = err as { response?: { data?: { message?: string } } };
+        const msg = error.response?.data?.message || 'Error de conexión con el servidor.';
+        toast.error(`Error al cargar datos base del lote: ${msg}`, { id: 'fetch-base-data-error' });
       } finally {
         setLoadingProduct(false);
       }
