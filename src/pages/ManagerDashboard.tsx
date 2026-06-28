@@ -61,6 +61,8 @@ export const ManagerDashboard: React.FC = () => {
   // Catálogo de Ingredientes
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
   const [loadingIngredients, setLoadingIngredients] = useState(true);
+  const [ingredientPage, setIngredientPage] = useState(0);
+  const [ingredientTotalPages, setIngredientTotalPages] = useState(0);
   
   // Registro de Ingrediente
   const [ingredientName, setIngredientName] = useState('');
@@ -89,13 +91,15 @@ export const ManagerDashboard: React.FC = () => {
     }
   };
 
-  const fetchIngredients = async () => {
+  const fetchIngredients = async (page = 0) => {
     try {
       setLoadingIngredients(true);
       const response = await api.get('/ingredients', {
-        params: { page: 0, size: 12, sort: 'name,asc' }
+        params: { page, size: 10, sort: 'name,asc' }
       });
       setIngredients(response.data.content);
+      setIngredientTotalPages(response.data.totalPages);
+      setIngredientPage(page);
     } catch {
       toast.error('Error al cargar la lista de ingredientes.');
     } finally {
@@ -130,7 +134,7 @@ export const ManagerDashboard: React.FC = () => {
     // Evitar llamadas sincrónicas al montar diferiendo la carga
     Promise.resolve().then(() => {
       fetchSuppliers(0);
-      fetchIngredients();
+      fetchIngredients(0);
       fetchReports();
     });
   }, []);
@@ -154,7 +158,7 @@ export const ManagerDashboard: React.FC = () => {
       setIngredientDesc('');
       setIngredientLife('');
       setIsIngredientModalOpen(false);
-      fetchIngredients();
+      fetchIngredients(0);
     } catch (err) {
       const error = err as { response?: { data?: { message?: string } } };
       toast.error(error.response?.data?.message || 'Error al crear el ingrediente.');
@@ -410,6 +414,33 @@ export const ManagerDashboard: React.FC = () => {
             ))
           )}
         </div>
+
+        {/* Controles de Paginación de Ingredientes */}
+        {ingredientTotalPages > 1 && (
+          <div className="flex items-center justify-between pt-4 mt-6 border-t border-white/5 text-[10px] text-gray-400">
+            <span>Pág. {ingredientPage + 1} de {ingredientTotalPages}</span>
+            <div className="flex gap-1">
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 w-7 p-0 border-white/5 bg-white/2 hover:bg-white/5 cursor-pointer text-white"
+                disabled={ingredientPage === 0}
+                onClick={() => fetchIngredients(ingredientPage - 1)}
+              >
+                <ChevronLeft className="h-3 w-3" />
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 w-7 p-0 border-white/5 bg-white/2 hover:bg-white/5 cursor-pointer text-white"
+                disabled={ingredientPage === ingredientTotalPages - 1}
+                onClick={() => fetchIngredients(ingredientPage + 1)}
+              >
+                <ChevronRight className="h-3 w-3" />
+              </Button>
+            </div>
+          </div>
+        )}
       </Card>
     </div>
   );
