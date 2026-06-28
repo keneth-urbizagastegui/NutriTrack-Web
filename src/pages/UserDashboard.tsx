@@ -212,6 +212,12 @@ export const UserDashboard: React.FC = () => {
     }
   };
 
+  const handleOpenRegisterForProduct = (productName: string, batchIdVal: number) => {
+    setSelectedProduct(productName);
+    setBatchId(String(batchIdVal));
+    setIsModalOpen(true);
+  };
+
   // Función para evaluar si un producto buscado contiene alérgenos del usuario
   const getProductAllergenWarning = (productName: string, productDesc: string) => {
     if (allergens.length === 0) return null;
@@ -326,52 +332,69 @@ export const UserDashboard: React.FC = () => {
               <form onSubmit={handleRegisterConsumption} className="space-y-4 pt-4">
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold text-gray-300">1. Seleccionar Producto</label>
-                  {loadingBatches ? (
+                  {selectedProduct && batchId ? (
+                    <div className="bg-[#0a0f1d] border border-white/10 rounded-lg p-2.5 text-sm font-semibold text-white flex justify-between items-center">
+                      <span>{selectedProduct}</span>
+                      <Badge variant="outline" className="text-primary border-primary/30 text-[10px]">Pre-seleccionado</Badge>
+                    </div>
+                  ) : loadingBatches ? (
                     <div className="flex items-center gap-2 text-xs text-gray-400 py-2.5">
                       <span className="animate-spin rounded-full h-3.5 w-3.5 border-b border-primary"></span>
                       Cargando catálogo...
                     </div>
                   ) : (
-                    <select
-                      value={selectedProduct}
-                      onChange={(e) => {
-                        setSelectedProduct(e.target.value);
-                        setBatchId('');
-                      }}
-                      className="w-full bg-[#0a0f1d] border border-white/10 text-white rounded-lg p-2.5 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary focus:ring-offset-0 transition-colors cursor-pointer"
-                      disabled={submitting}
-                      required
-                    >
-                      <option value="" className="text-gray-400">-- Selecciona un producto --</option>
-                      {uniqueProductsWithBatches.map((name) => (
-                        <option key={name} value={name} className="text-white bg-[#0a0f1d]">
-                          {name}
-                        </option>
-                      ))}
-                    </select>
+                    <div>
+                      <select
+                        value={selectedProduct}
+                        onChange={(e) => {
+                          setSelectedProduct(e.target.value);
+                          setBatchId('');
+                        }}
+                        className="w-full bg-[#0a0f1d] border border-white/10 text-white rounded-lg p-2.5 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary focus:ring-offset-0 transition-colors cursor-pointer"
+                        disabled={submitting}
+                        required
+                      >
+                        <option value="" className="text-gray-400">-- Selecciona un producto --</option>
+                        {uniqueProductsWithBatches.map((name) => (
+                          <option key={name} value={name} className="text-white bg-[#0a0f1d]">
+                            {name}
+                          </option>
+                        ))}
+                      </select>
+                      <p className="text-[10px] text-gray-400 mt-1.5">
+                        *Tip: Utiliza el buscador del dashboard para seleccionar y registrar ingestas al instante.
+                      </p>
+                    </div>
                   )}
                 </div>
 
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold text-gray-300">2. Seleccionar Lote Activo</label>
-                  <select
-                    value={batchId}
-                    onChange={(e) => setBatchId(e.target.value)}
-                    className="w-full bg-[#0a0f1d] border border-white/10 text-white rounded-lg p-2.5 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary focus:ring-offset-0 transition-colors cursor-pointer disabled:opacity-50"
-                    disabled={submitting || !selectedProduct}
-                    required
-                  >
-                    <option value="" className="text-gray-400">
-                      {selectedProduct ? '-- Selecciona un lote activo --' : '-- Selecciona un producto primero --'}
-                    </option>
-                    {activeBatches
-                      .filter((batch) => batch.productName === selectedProduct)
-                      .map((batch) => (
-                        <option key={batch.id} value={batch.id} className="text-white bg-[#0a0f1d]">
-                          Lote: {batch.batchNumber}
-                        </option>
-                      ))}
-                  </select>
+                  {selectedProduct && batchId ? (
+                    <div className="bg-[#0a0f1d] border border-white/10 rounded-lg p-2.5 text-sm font-semibold text-white flex justify-between items-center">
+                      <span>Lote: {activeBatches.find(b => b.id === Number(batchId))?.batchNumber || batchId}</span>
+                      <Badge variant="outline" className="text-cyan-400 border-cyan-400/30 text-[10px]">Lote Activo</Badge>
+                    </div>
+                  ) : (
+                    <select
+                      value={batchId}
+                      onChange={(e) => setBatchId(e.target.value)}
+                      className="w-full bg-[#0a0f1d] border border-white/10 text-white rounded-lg p-2.5 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary focus:ring-offset-0 transition-colors cursor-pointer disabled:opacity-50"
+                      disabled={submitting || !selectedProduct}
+                      required
+                    >
+                      <option value="" className="text-gray-400">
+                        {selectedProduct ? '-- Selecciona un lote activo --' : '-- Selecciona un producto primero --'}
+                      </option>
+                      {activeBatches
+                        .filter((batch) => batch.productName === selectedProduct)
+                        .map((batch) => (
+                          <option key={batch.id} value={batch.id} className="text-white bg-[#0a0f1d]">
+                            Lote: {batch.batchNumber}
+                          </option>
+                        ))}
+                    </select>
+                  )}
                 </div>
 
                 <div className="space-y-1.5">
@@ -384,7 +407,7 @@ export const UserDashboard: React.FC = () => {
                       placeholder="ej. 40.0"
                       value={quantityGrams}
                       onChange={(e) => setQuantityGrams(e.target.value)}
-                      className="bg-white/5 border-white/10 text-white focus:border-primary focus:ring-1 focus:ring-primary w-full pr-10"
+                      className="bg-[#0a0f1d] border-white/10 text-white focus:border-primary focus:ring-1 focus:ring-primary w-full pr-10"
                       disabled={submitting}
                       required
                     />
@@ -410,14 +433,14 @@ export const UserDashboard: React.FC = () => {
         <CardHeader className="px-0 pt-0">
           <CardTitle className="text-lg font-bold text-white">Buscador de Suplementos y Alimentos</CardTitle>
           <CardDescription className="text-gray-400">
-            Busca y consulta el valor nutricional de los productos registrados en el sistema
+            Busca y consulta el valor de tu producto, inspecciona su trazabilidad o registra tu consumo al instante
           </CardDescription>
         </CardHeader>
-        <div className="relative group">
+        <div className="relative group mb-6">
           <Search className="absolute left-4 top-3 h-4 w-4 text-gray-400 group-hover:text-primary transition-colors" />
           <Input
             type="text"
-            placeholder="Buscar por nombre de producto (ej. Proteína)..."
+            placeholder="Buscar por nombre de producto (ej. Proteína, Avena, Wild)..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="bg-white/5 border-white/10 text-white pl-11 pr-4 focus:border-primary focus:ring-1 focus:ring-primary placeholder:text-gray-400 transition-all duration-200"
@@ -425,48 +448,61 @@ export const UserDashboard: React.FC = () => {
         </div>
 
         {/* Resultados del Buscador */}
-        {loadingProducts && <p className="text-xs text-gray-400 mt-4 animate-pulse">Buscando productos...</p>}
+        {loadingProducts && <p className="text-xs text-gray-400 animate-pulse mb-4">Buscando productos...</p>}
         {((searchTerm.trim() === '' ? defaultProducts : products).length > 0) && (
-          <div className="mt-4 border border-white/5 rounded-lg overflow-hidden divide-y divide-white/5">
+          <div className="space-y-3.5">
             {(searchTerm.trim() === '' ? defaultProducts : products).map((prod) => {
               const allergenWarning = getProductAllergenWarning(prod.name, prod.description);
+              const activeBatch = activeBatches.find(b => b.productName === prod.name);
+              
               return (
-                <div key={prod.id} className="p-4 bg-white/5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:bg-white/10 transition-colors duration-200">
-                  <div>
+                <div key={prod.id} className="p-4 bg-white/5 border border-white/5 rounded-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4 hover:bg-white/10 hover:border-white/10 transition-all duration-200 shadow-md">
+                  <div className="space-y-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <h4 className="font-bold text-white text-sm">{prod.name}</h4>
+                      <h4 className="font-bold text-white text-sm tracking-wide">{prod.name}</h4>
                       {allergenWarning && (
-                        <Badge className="bg-rose-500/20 text-rose-300 border border-rose-500/30 text-[10px] font-black flex items-center gap-1">
+                        <Badge className="bg-rose-500/20 text-rose-300 border border-rose-500/30 text-[9px] font-black flex items-center gap-1 py-0.5 px-2">
                           <AlertTriangle className="h-3 w-3 text-rose-400 animate-pulse" /> Contiene: {allergenWarning}
                         </Badge>
                       )}
                     </div>
-                    <p className="text-xs text-gray-400">{prod.brand} • {prod.category}</p>
+                    <p className="text-xs text-gray-400">{prod.brand} • <span className="text-primary font-medium">{prod.category}</span></p>
                   </div>
-                  <div className="flex items-center gap-4">
-                    <div className="flex gap-2 text-xs">
-                      <Badge className="bg-emerald-950 text-emerald-300 border border-emerald-800">P: {prod.proteinPer100g}g</Badge>
-                      <Badge className="bg-cyan-950 text-cyan-300 border border-cyan-800">C: {prod.carbsPer100g}g</Badge>
-                      <Badge className="bg-amber-950 text-amber-300 border border-amber-800">G: {prod.fatPer100g}g</Badge>
+                  
+                  <div className="flex flex-wrap items-center gap-4 w-full md:w-auto justify-between md:justify-end">
+                    <div className="flex gap-1.5 text-[10px] font-bold">
+                      <Badge className="bg-emerald-950/60 text-emerald-300 border border-emerald-800/40">P: {prod.proteinPer100g}g</Badge>
+                      <Badge className="bg-cyan-950/60 text-cyan-300 border border-cyan-800/40">C: {prod.carbsPer100g}g</Badge>
+                      <Badge className="bg-amber-950/60 text-amber-300 border border-amber-800/40">G: {prod.fatPer100g}g</Badge>
                     </div>
-                    {(() => {
-                      const activeBatch = activeBatches.find(b => b.productName === prod.name);
-                      return activeBatch ? (
-                        <Button
-                          asChild
-                          size="sm"
-                          className="bg-[#0e7490] hover:bg-cyan-600 text-white font-bold text-xs px-2.5 py-1.5 rounded cursor-pointer transition-all duration-200 flex items-center gap-1 animate-fade-in"
-                        >
-                          <Link to={`/traceability/${activeBatch.id}`}>
-                            <Eye className="h-3.5 w-3.5" /> Ver Trazabilidad
-                          </Link>
-                        </Button>
+                    
+                    <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                      {activeBatch ? (
+                        <>
+                          <Button
+                            onClick={() => handleOpenRegisterForProduct(prod.name, activeBatch.id)}
+                            size="sm"
+                            className="bg-primary hover:bg-emerald-600 text-white font-bold text-xs px-3 py-1.5 rounded-lg cursor-pointer transition-all duration-150 flex items-center gap-1"
+                          >
+                            <PlusCircle className="h-3.5 w-3.5" /> Registrar Consumo
+                          </Button>
+                          <Button
+                            asChild
+                            size="sm"
+                            variant="outline"
+                            className="border-cyan-500/30 text-cyan-400 hover:bg-cyan-950/40 hover:text-cyan-300 font-bold text-xs px-3 py-1.5 rounded-lg cursor-pointer transition-all duration-150 flex items-center gap-1"
+                          >
+                            <Link to={`/traceability/${activeBatch.id}`}>
+                              <Eye className="h-3.5 w-3.5" /> Ver Trazabilidad
+                            </Link>
+                          </Button>
+                        </>
                       ) : (
-                        <Badge variant="outline" className="text-gray-500 border-white/5 bg-white/2 text-[10px]">
-                          Sin Lotes Activos
+                        <Badge variant="outline" className="text-gray-500 border-white/5 bg-white/2 text-[10px] py-1 px-2.5 rounded-lg">
+                          Sin Lotes Activos (No Registrable)
                         </Badge>
-                      );
-                    })()}
+                      )}
+                    </div>
                   </div>
                 </div>
               );
