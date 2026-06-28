@@ -2,10 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../services/api';
 import { toast } from 'sonner';
+import { useAuthStore } from '../store/useAuthStore';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { PlusCircle, Search, Dumbbell, Calendar, Flame, ChevronLeft, ChevronRight, Activity, AlertTriangle, Lock, Eye } from 'lucide-react';
 
@@ -51,6 +52,7 @@ interface MacroTotals {
 }
 
 export const UserDashboard: React.FC = () => {
+  const { user } = useAuthStore();
   const [history, setHistory] = useState<ConsumptionLog[]>([]);
   const [totalPages, setTotalPages] = useState(0);
   const [currentPage, setCurrentPage] = useState(0);
@@ -62,20 +64,20 @@ export const UserDashboard: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [activeBatches, setActiveBatches] = useState<ActiveBatch[]>([]);
-  const [loadingBatches, setLoadingBatches] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState('');
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [activeOnly, setActiveOnly] = useState(true);
 
+  // Estados para Modal Informativo sobre lotes ausentes
+  const [noBatchProduct, setNoBatchProduct] = useState<Product | null>(null);
+  const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
+
   const fetchActiveBatches = async () => {
     try {
-      setLoadingBatches(true);
       const response = await api.get('/batches');
       setActiveBatches(response.data);
     } catch {
       toast.error('Error al cargar la lista de lotes activos.');
-    } finally {
-      setLoadingBatches(false);
     }
   };
 
@@ -101,13 +103,11 @@ export const UserDashboard: React.FC = () => {
   const [productPage, setProductPage] = useState(0);
   const productsPerPage = 5;
 
-  // Resetear página del buscador al cambiar filtros o término
-  useEffect(() => {
-    setProductPage(0);
-  }, [searchTerm, activeOnly]);
-
-  // Lista local de alérgenos activos para búsquedas proactivas
-  const [allergens, setAllergens] = useState<AllergenIngredient[]>([]);
+  // Lista local de alérgenos activos inicializada perezosamente desde sessionStorage para evitar setState en useEffect
+  const [allergens] = useState<AllergenIngredient[]>(() => {
+    const saved = sessionStorage.getItem('sessionAllergens');
+    return saved ? JSON.parse(saved) : [];
+  });
 
   // Totales de macros del día
   const [dailyMacros, setDailyMacros] = useState({ protein: 0, carbs: 0, fat: 0, calories: 0 });
@@ -152,11 +152,6 @@ export const UserDashboard: React.FC = () => {
   };
 
   useEffect(() => {
-    const saved = sessionStorage.getItem('sessionAllergens');
-    if (saved) {
-      setAllergens(JSON.parse(saved));
-    }
-    
     // Aplazar actualización de estados asíncronos para evitar warnings de react-hooks/set-state-in-effect
     Promise.resolve().then(() => {
       fetchHistory(0);
@@ -206,6 +201,11 @@ export const UserDashboard: React.FC = () => {
     setSelectedProduct(productName);
     setBatchId(String(batchIdVal));
     setIsModalOpen(true);
+  };
+
+  const handleOpenNoBatchInfo = (product: Product) => {
+    setNoBatchProduct(product);
+    setIsInfoModalOpen(true);
   };
 
   // Función para evaluar si un producto buscado contiene alérgenos del usuario
@@ -381,8 +381,75 @@ export const UserDashboard: React.FC = () => {
               disabled={submitting}
             >
               {submitting ? 'Guardando Consumo...' : 'Confirmar y Registrar'}
-            </Button>
-          </form>
+               </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Informativo / Educativo para Productos sin Lote Activo */}
+      <Dialog open={isInfoModalOpen} onOpenChange={setIsInfoModalOpen}>
+        <DialogContent className="glass-panel border-none text-white max-w-md shadow-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-white flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" /> Trazabilidad Requerida
+            </DialogTitle>
+          </DialogHeader>
+
+          {noBatchProduct && (
+            <div className="space-y-4 pt-3">
+              <div className="bg-white/5 border border-white/10 rounded-xl p-4 space-y-1">
+                <span className="text-[10px] font-black text-amber-400 uppercase tracking-wider">Producto Seleccionado</span>
+                <h4 className="font-bold text-white text-sm">{noBatchProduct.name}</h4>
+                <p className="text-xs text-gray-400">{noBatchProduct.brand} • {noBatchProduct.category}</p>
+              </div>
+
+              <div className="text-sm text-gray-300 space-y-3 leading-relaxed">
+                <p>
+                  En <strong>NutriTrack</strong>, cada consumo diario registrado debe estar asociado a un <strong>lote de producción físico y activo</strong>.
+                </p>
+                <div className="bg-amber-950/20 border border-amber-900/30 rounded-lg p-3 text-xs text-amber-300 space-y-2">
+                  <p className="font-semibold flex items-center gap-1">
+                    <Lock className="h-3.5 w-3.5" /> ¿Por qué es obligatorio?
+                  </p>
+                  <ul className="list-disc pl-4 space-y-1 text-amber-400/90">
+                    <li><strong>Control de Alérgenos:</strong> Para comprobar que los ingredientes del lote no contengan alérgenos de tu perfil.</li>
+                    <li><strong>Garantía de Inocuidad:</strong> Para asegurar que el lote no haya sido retirado por fallos de calidad (RECALLED).</li>
+                  </ul>
+                </div>
+                <p className="text-xs text-gray-400">
+                  Actualmente no hay lotes de producción activos registrados para este producto.
+                </p>
+              </div>
+
+              <div className="pt-2 border-t border-white/5 flex flex-col gap-2">
+                {user?.roles.some(role => ['ROLE_ADMIN', 'ROLE_MANAGER'].includes(role)) ? (
+                  <>
+                    <p className="text-[10px] text-gray-405 text-center mb-1 text-gray-400">
+                      Detectamos que tienes privilegios de Administrador/Manager.
+                    </p>
+                    <Button
+                      asChild
+                      className="w-full bg-primary hover:bg-emerald-600 text-white font-bold"
+                    >
+                      <Link to={`/products/${noBatchProduct.id}/batches/new`}>
+                        Crear Lote Activo para este Producto
+                      </Link>
+                    </Button>
+                  </>
+                ) : (
+                  <p className="text-[10px] text-gray-500 text-center">
+                    Los usuarios con rol regular deben esperar a que el Manager o Administrador registre un lote activo.
+                  </p>
+                )}
+                <Button
+                  onClick={() => setIsInfoModalOpen(false)}
+                  variant="outline"
+                  className="w-full border-white/10 text-white hover:bg-white/10"
+                >
+                  Entendido / Cerrar
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 
@@ -403,7 +470,10 @@ export const UserDashboard: React.FC = () => {
               type="text"
               placeholder="Buscar por nombre de producto, marca o categoría (ej. Proteína, Avena, Wild)..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setProductPage(0);
+              }}
               className="bg-white/5 border-white/10 text-white pl-11 pr-4 focus:border-primary focus:ring-1 focus:ring-primary placeholder:text-gray-400 transition-all duration-200"
             />
           </div>
@@ -412,7 +482,10 @@ export const UserDashboard: React.FC = () => {
             <input
               type="checkbox"
               checked={activeOnly}
-              onChange={(e) => setActiveOnly(e.target.checked)}
+              onChange={(e) => {
+                setActiveOnly(e.target.checked);
+                setProductPage(0);
+              }}
               className="accent-primary h-4 w-4 rounded cursor-pointer"
             />
             <span>Solo productos con lotes activos</span>
@@ -492,9 +565,14 @@ export const UserDashboard: React.FC = () => {
                               </Button>
                             </>
                           ) : (
-                            <Badge variant="outline" className="text-gray-500 border-white/5 bg-white/2 text-[10px] py-1 px-2.5 rounded-lg">
-                              Sin Lotes Activos (No Registrable)
-                            </Badge>
+                            <Button
+                              onClick={() => handleOpenNoBatchInfo(prod)}
+                              size="sm"
+                              variant="outline"
+                              className="border-amber-500/20 text-amber-500 hover:bg-amber-950/20 hover:text-amber-400 font-semibold text-xs px-2.5 py-1.5 rounded-lg cursor-pointer transition-all duration-150 flex items-center gap-1"
+                            >
+                              <AlertTriangle className="h-3.5 w-3.5" /> Sin Lote Activo (Info)
+                            </Button>
                           )}
                         </div>
                       </div>
