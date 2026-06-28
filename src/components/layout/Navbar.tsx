@@ -38,9 +38,15 @@ export const Navbar: React.FC = () => {
                 </>
               ) : (
                 <>
-                  <Link to="/manager" className="text-gray-300 hover:text-primary transition-colors">
-                    Panel Control
-                  </Link>
+                  {user.roles.includes('ROLE_ADMIN') ? (
+                    <Link to="/admin" className="text-gray-300 hover:text-primary transition-colors">
+                      Panel Admin
+                    </Link>
+                  ) : (
+                    <Link to="/manager" className="text-gray-300 hover:text-primary transition-colors">
+                      Panel Gestor
+                    </Link>
+                  )}
                   <Link to="/products" className="text-gray-300 hover:text-primary transition-colors">
                     Productos
                   </Link>

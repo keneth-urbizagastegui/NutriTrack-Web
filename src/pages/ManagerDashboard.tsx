@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../services/api';
-import { useAuthStore } from '../store/useAuthStore';
 import { toast } from 'sonner';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,8 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { 
-  ShieldAlert, Factory, ToggleLeft, ToggleRight, 
-  ChevronLeft, ChevronRight, Layers, Users, PhoneCall 
+  Factory, Layers, Users, PhoneCall, ChevronLeft, ChevronRight, 
+  PlusCircle, AlertTriangle, Eye, ShieldCheck, ClipboardList
 } from 'lucide-react';
 
 interface Supplier {
@@ -50,20 +49,11 @@ interface RawReportResponse {
 }
 
 export const ManagerDashboard: React.FC = () => {
-  const { user } = useAuthStore();
-  const isAdmin = user?.roles.includes('ROLE_ADMIN');
-
-  // Catálogo de Proveedores
+  // Catálogo de Proveedores (Lectura)
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [loadingSuppliers, setLoadingSuppliers] = useState(true);
   const [supplierPage, setSupplierPage] = useState(0);
   const [supplierTotalPages, setSupplierTotalPages] = useState(0);
-
-  // Registro de Proveedor
-  const [supplierName, setSupplierName] = useState('');
-  const [supplierEmail, setSupplierEmail] = useState('');
-  const [creatingSupplier, setCreatingSupplier] = useState(false);
-  const [isSupplierModalOpen, setIsSupplierModalOpen] = useState(false);
 
   // Catálogo de Ingredientes
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
@@ -76,7 +66,7 @@ export const ManagerDashboard: React.FC = () => {
   const [creatingIngredient, setCreatingIngredient] = useState(false);
   const [isIngredientModalOpen, setIsIngredientModalOpen] = useState(false);
 
-  // Reportes de Calidad
+  // Reportes de Calidad (Monitoreo)
   const [reports, setReports] = useState<MockReport[]>([]);
   const [loadingReports, setLoadingReports] = useState(true);
 
@@ -100,7 +90,7 @@ export const ManagerDashboard: React.FC = () => {
     try {
       setLoadingIngredients(true);
       const response = await api.get('/ingredients', {
-        params: { page: 0, size: 10, sort: 'name,asc' }
+        params: { page: 0, size: 12, sort: 'name,asc' }
       });
       setIngredients(response.data.content);
     } catch {
@@ -124,54 +114,28 @@ export const ManagerDashboard: React.FC = () => {
         reportDate: r.reportDate,
         status: r.status,
       }));
-      // Ordenar por fecha descendente
       formatted.sort((a: MockReport, b: MockReport) => new Date(b.reportDate).getTime() - new Date(a.reportDate).getTime());
       setReports(formatted);
     } catch {
-      toast.error('Error al cargar la lista de alertas sanitarias.');
+      toast.error('Error al cargar el buzón de alertas sanitarias.');
     } finally {
       setLoadingReports(false);
     }
   };
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchSuppliers(0);
-    fetchIngredients();
-    fetchReports();
-  }, []);
-
-  const handleCreateSupplier = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!supplierName.trim()) {
-      toast.error('El nombre del proveedor es obligatorio.');
-      return;
-    }
-
-    try {
-      setCreatingSupplier(true);
-      await api.post('/suppliers', {
-        name: supplierName,
-        contactEmail: supplierEmail,
-        isActive: true
-      });
-      toast.success('Proveedor creado correctamente.');
-      setSupplierName('');
-      setSupplierEmail('');
-      setIsSupplierModalOpen(false);
+    // Evitar llamadas sincrónicas al montar diferiendo la carga
+    Promise.resolve().then(() => {
       fetchSuppliers(0);
-    } catch (err) {
-      const error = err as { response?: { data?: { message?: string } } };
-      toast.error(error.response?.data?.message || 'Error al crear el proveedor.');
-    } finally {
-      setCreatingSupplier(false);
-    }
-  };
+      fetchIngredients();
+      fetchReports();
+    });
+  }, []);
 
   const handleCreateIngredient = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!ingredientName.trim() || !ingredientLife) {
-      toast.error('Nombre y Vida Útil son obligatorios.');
+      toast.error('El nombre y la vida útil son campos obligatorios.');
       return;
     }
 
@@ -182,7 +146,7 @@ export const ManagerDashboard: React.FC = () => {
         description: ingredientDesc,
         shelfLifeDays: Number(ingredientLife)
       });
-      toast.success('Ingrediente creado correctamente.');
+      toast.success('Materia prima registrada correctamente.');
       setIngredientName('');
       setIngredientDesc('');
       setIngredientLife('');
@@ -196,118 +160,83 @@ export const ManagerDashboard: React.FC = () => {
     }
   };
 
-  // Acción Exclusiva del Admin: Retirar Lote
-  const handleRecallBatch = async (reportId: number, batchId: number, batchNumber: string) => {
-    if (!isAdmin) {
-      toast.error('Acción denegada: Solo los administradores pueden retirar lotes del mercado.');
-      return;
-    }
-
-    try {
-      await api.post(`/batches/${batchId}/recall`);
-      
-      // Actualizar estado del reporte a nivel local
-      setReports(reports.map(r => r.id === reportId ? { ...r, status: 'RECALLED_BATCH' } : r));
-      toast.success(
-        <div className="flex flex-col gap-1">
-          <span className="font-bold text-rose-500">Lote Retirado</span>
-          <span>El lote {batchNumber} ha sido retirado y bloqueado del sistema correctamente.</span>
-        </div>,
-        { duration: 5000 }
-      );
-    } catch (err) {
-      const error = err as { response?: { data?: { message?: string } } };
-      toast.error(error.response?.data?.message || 'Error al retirar el lote.');
-    }
-  };
-
-  // Simulación de toggle de estado de proveedor para el Admin
-  const handleToggleSupplier = (supplierId: number, name: string, currentState: boolean) => {
-    if (!isAdmin) {
-      toast.error('Acción denegada: Solo los administradores pueden activar o desactivar proveedores.');
-      return;
-    }
-
-    setSuppliers(suppliers.map(s => s.id === supplierId ? { ...s, isActive: !currentState } : s));
-    toast.success(`Proveedor "${name}" ${!currentState ? 'ACTIVADO' : 'DESACTIVADO'} correctamente en el panel de auditoría.`);
-  };
-
   return (
     <div className="space-y-8">
-      {/* Encabezado General del Manager Panel */}
+      {/* Encabezado General del Panel de Gestión de Producción */}
       <Card className="glass-panel border-none p-6 shadow-2xl relative overflow-hidden flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
-        <div className="absolute top-0 left-0 right-0 h-1 bg-linear-to-r from-primary to-secondary" />
-
+        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 to-cyan-500" />
         <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-            <Factory className="h-6 w-6 text-primary" />
-            Panel de Control Operativo
+          <h1 className="text-2xl font-bold text-white flex items-center gap-2 tracking-wide">
+            <Factory className="h-6 w-6 text-emerald-500 animate-pulse" />
+            Consola de Control de Producción
           </h1>
-          <p className="text-sm text-gray-400">
-            {isAdmin ? 'Administración de Sistemas, Calidad y Trazabilidad' : 'Gestión de Productos, Lotes y Proveedores'}
+          <p className="text-xs text-gray-400 mt-1">
+            Gestión operativa de suplementos, trazabilidad de lotes físicos y control de ingredientes del almacén
           </p>
         </div>
         <div className="flex gap-3">
-          <Button asChild className="bg-primary hover:bg-emerald-600 text-white font-bold text-xs py-1.5 px-3.5">
-            <Link to="/products/new">Nuevo Producto</Link>
+          <Button asChild className="bg-primary hover:bg-emerald-600 text-white font-bold text-xs py-2 px-4 rounded-lg cursor-pointer transition-colors shadow-md">
+            <Link to="/products" className="flex items-center gap-1">
+              <ClipboardList className="h-4 w-4" /> Catálogo de Productos
+            </Link>
           </Button>
         </div>
       </Card>
 
-      {/* Grid de Reportes de Calidad e Ingredientes */}
+      {/* Grid Superior: Reportes de Calidad y Directorio de Proveedores */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {/* Reportes de Calidad (Audit Logs) - 2 Cols */}
+        {/* Buzón de Incidentes de Calidad (2 Columnas - Solo Lectura) */}
         <Card className="glass-panel border-none p-6 shadow-xl lg:col-span-2">
           <CardHeader className="px-0 pt-0">
             <CardTitle className="text-lg font-bold text-white flex items-center gap-2">
-              <ShieldAlert className="h-5 w-5 text-rose-500" />
-              Alertas Sanitarias y de Calidad
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              Buzón de Control de Calidad e Incidentes
             </CardTitle>
             <CardDescription className="text-gray-400">
-              Reportes ingresados por deportistas. {isAdmin ? 'Como administrador puedes retirar lotes de inmediato.' : 'Visualización de reportes.'}
+              Alertas registradas por los deportistas. Si un lote se reporta como defectuoso, coordina con Administración su retiro preventivo.
             </CardDescription>
           </CardHeader>
 
-          <div className="space-y-4 mt-2">
+          <div className="space-y-4 mt-4">
             {loadingReports ? (
-              <p className="text-xs text-gray-400">Cargando alertas de calidad...</p>
+              <p className="text-xs text-gray-400 animate-pulse py-4">Cargando alertas de calidad...</p>
             ) : reports.length === 0 ? (
-              <p className="text-xs text-gray-400">No hay alertas sanitarias ni de calidad registradas.</p>
+              <div className="text-center py-10 text-gray-500 border border-white/5 border-dashed rounded-xl bg-white/2">
+                <ShieldCheck className="h-8 w-8 mx-auto text-emerald-500 mb-2 stroke-[1.5]" />
+                <p className="text-xs font-semibold">No se han registrado reportes de incidentes en los lotes.</p>
+              </div>
             ) : (
               reports.map((report) => (
                 <div 
                   key={report.id} 
-                  className={`p-4 rounded-xl border flex flex-col justify-between gap-4 ${
+                  className={`p-4 rounded-xl border flex flex-col justify-between gap-4 transition-all duration-150 bg-white/2 ${
                     report.status === 'PENDING' 
-                      ? 'bg-amber-950/10 border-amber-900/50' 
-                      : 'bg-rose-950/10 border-rose-900/50'
+                      ? 'border-amber-500/20 hover:bg-amber-950/10' 
+                      : 'border-rose-500/20 hover:bg-rose-950/10'
                   }`}
                 >
-                  <div className="flex justify-between items-start gap-2">
-                    <div>
+                  <div className="flex justify-between items-start gap-4">
+                    <div className="space-y-1">
                       <h4 className="font-bold text-white text-sm">{report.title}</h4>
-                      <p className="text-xs text-gray-400">Lote: <strong className="text-gray-200">{report.batchNumber}</strong> ({report.productName})</p>
-                      <p className="text-xs text-gray-500 mt-1 whitespace-pre-line">{report.description}</p>
+                      <p className="text-xs text-gray-400">
+                        Producto: <strong className="text-gray-200">{report.productName}</strong> • Lote: <strong className="text-gray-200">{report.batchNumber}</strong>
+                      </p>
+                      <p className="text-xs text-gray-550 mt-2 bg-black/20 p-2.5 rounded-lg border border-white/5 leading-relaxed text-gray-300">
+                        {report.description}
+                      </p>
                     </div>
-                    <Badge variant={report.status === 'PENDING' ? 'outline' : 'destructive'} className="shrink-0 uppercase font-bold text-[10px]">
-                      {report.status === 'PENDING' ? 'Pendiente' : 'Lote Bloqueado'}
+                    <Badge variant={report.status === 'PENDING' ? 'outline' : 'destructive'} className="shrink-0 uppercase font-bold text-[9px] py-0.5 px-2">
+                      {report.status === 'PENDING' ? 'Bajo Inspección' : 'Lote Bloqueado'}
                     </Badge>
                   </div>
 
-                  <div className="flex justify-between items-center border-t border-white/5 pt-3 mt-1">
-                    <span className="text-[10px] text-gray-500">Reportado: {new Date(report.reportDate).toLocaleDateString()}</span>
-                    
+                  <div className="flex justify-between items-center border-t border-white/5 pt-3 mt-1 text-[10px] text-gray-500">
+                    <span>Recibido: {new Date(report.reportDate).toLocaleDateString()}</span>
                     {report.status === 'PENDING' && (
-                      <Button 
-                        size="sm"
-                        variant="destructive"
-                        className="text-xs font-bold"
-                        onClick={() => handleRecallBatch(report.id, report.batchId, report.batchNumber)}
-                        disabled={!isAdmin}
-                      >
-                        {!isAdmin ? 'Solo Admin' : 'Retirar Lote (Recall)'}
-                      </Button>
+                      <span className="text-amber-500/90 font-semibold flex items-center gap-1">
+                        ⚠️ Reportado al Administrador
+                      </span>
                     )}
                   </div>
                 </div>
@@ -316,119 +245,64 @@ export const ManagerDashboard: React.FC = () => {
           </div>
         </Card>
 
-        {/* Proveedores y Botón Modal - 1 Col */}
+        {/* Directorio de Proveedores Homologados (1 Columna - Solo Lectura) */}
         <Card className="glass-panel border-none p-6 shadow-xl lg:col-span-1 flex flex-col justify-between">
           <div>
-            <CardHeader className="px-0 pt-0 flex flex-row items-center justify-between">
-              <div>
-                <CardTitle className="text-lg font-bold text-white flex items-center gap-2">
-                  <Users className="h-5 w-5 text-secondary" />
-                  Proveedores
-                </CardTitle>
-                <CardDescription className="text-gray-400">Catálogo de proveedores de ingredientes</CardDescription>
-              </div>
-              <Dialog open={isSupplierModalOpen} onOpenChange={setIsSupplierModalOpen}>
-                <DialogTrigger asChild>
-                  <Button size="sm" className="bg-white/5 border border-white/10 hover:bg-white/10 text-white p-2">
-                    +
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="glass-panel border-none text-white max-w-md">
-                  <DialogHeader>
-                    <DialogTitle className="text-lg font-bold text-white flex items-center gap-2">
-                      <Users className="h-5 w-5 text-secondary" /> Nuevo Proveedor
-                    </DialogTitle>
-                  </DialogHeader>
-                  <form onSubmit={handleCreateSupplier} className="space-y-4 pt-4">
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-semibold text-gray-300">Nombre del Proveedor</label>
-                      <Input
-                        type="text"
-                        placeholder="Lácteos del Sur S.A."
-                        value={supplierName}
-                        onChange={(e) => setSupplierName(e.target.value)}
-                        className="bg-white/5 border-white/10 text-white"
-                        disabled={creatingSupplier}
-                        required
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-semibold text-gray-300">Email de Contacto</label>
-                      <Input
-                        type="email"
-                        placeholder="contacto@lacteosdelsur.com"
-                        value={supplierEmail}
-                        onChange={(e) => setSupplierEmail(e.target.value)}
-                        className="bg-white/5 border-white/10 text-white"
-                        disabled={creatingSupplier}
-                      />
-                    </div>
-                    <Button
-                      type="submit"
-                      className="w-full bg-primary hover:bg-emerald-600 text-white font-bold mt-4"
-                      disabled={creatingSupplier}
-                    >
-                      {creatingSupplier ? 'Guardando...' : 'Crear Proveedor'}
-                    </Button>
-                  </form>
-                </DialogContent>
-              </Dialog>
+            <CardHeader className="px-0 pt-0">
+              <CardTitle className="text-lg font-bold text-white flex items-center gap-2">
+                <Users className="h-5 w-5 text-cyan-400" />
+                Proveedores Activos
+              </CardTitle>
+              <CardDescription className="text-gray-400">Proveedores habilitados por Administración para compra de insumos</CardDescription>
             </CardHeader>
 
             <div className="space-y-3 mt-4">
               {loadingSuppliers ? (
-                <p className="text-xs text-gray-400">Cargando...</p>
+                <p className="text-xs text-gray-400 animate-pulse">Cargando proveedores...</p>
+              ) : suppliers.length === 0 ? (
+                <p className="text-xs text-gray-400">No hay proveedores homologados.</p>
               ) : (
                 suppliers.map((s) => (
-                  <div key={s.id} className="p-3 bg-white/5 rounded-lg border border-white/5 flex justify-between items-center gap-2">
-                    <div>
-                      <h4 className="font-bold text-white text-xs">{s.name}</h4>
+                  <div key={s.id} className="p-3 bg-white/2 border border-white/5 rounded-xl flex items-center justify-between gap-2 hover:border-white/10 transition-all duration-150">
+                    <div className="min-w-0">
+                      <h5 className="font-bold text-white text-xs truncate">{s.name}</h5>
                       {s.contactEmail && (
-                        <p className="text-[10px] text-gray-400 flex items-center gap-1">
-                          <PhoneCall className="h-3 w-3" /> {s.contactEmail}
-                        </p>
+                        <span className="text-[10px] text-gray-500 block truncate flex items-center gap-1 mt-0.5">
+                          <PhoneCall className="h-3 w-3 text-cyan-500/60" /> {s.contactEmail}
+                        </span>
                       )}
                     </div>
-                    
-                    <button
-                      onClick={() => handleToggleSupplier(s.id, s.name, s.isActive)}
-                      className="text-gray-400 hover:text-white transition-colors"
-                      title={isAdmin ? 'Toggle active state' : 'Solo Admin'}
-                      disabled={!isAdmin}
-                    >
-                      {s.isActive ? (
-                        <ToggleRight className="h-6 w-6 text-primary" />
-                      ) : (
-                        <ToggleLeft className="h-6 w-6 text-gray-600" />
-                      )}
-                    </button>
+                    <Badge className={s.isActive ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[8px]" : "bg-gray-800 text-gray-400 text-[8px]"}>
+                      {s.isActive ? 'Habilitado' : 'Inactivo'}
+                    </Badge>
                   </div>
                 ))
               )}
             </div>
           </div>
 
+          {/* Controles de Paginación */}
           {supplierTotalPages > 1 && (
-            <div className="flex justify-between items-center mt-6 text-[10px] text-gray-400 pt-2 border-t border-white/5">
-              <span>Pág {supplierPage + 1} de {supplierTotalPages}</span>
+            <div className="flex items-center justify-between pt-4 mt-4 border-t border-white/5 text-[10px] text-gray-400">
+              <span>Pág. {supplierPage + 1} de {supplierTotalPages}</span>
               <div className="flex gap-1">
                 <Button
                   size="sm"
-                  variant="ghost"
-                  className="p-1 h-6 w-6"
+                  variant="outline"
+                  className="h-7 w-7 p-0 border-white/5 bg-white/2 hover:bg-white/5"
                   disabled={supplierPage === 0}
                   onClick={() => fetchSuppliers(supplierPage - 1)}
                 >
-                  <ChevronLeft className="h-4 w-4" />
+                  <ChevronLeft className="h-3 w-3" />
                 </Button>
                 <Button
                   size="sm"
-                  variant="ghost"
-                  className="p-1 h-6 w-6"
+                  variant="outline"
+                  className="h-7 w-7 p-0 border-white/5 bg-white/2 hover:bg-white/5"
                   disabled={supplierPage === supplierTotalPages - 1}
                   onClick={() => fetchSuppliers(supplierPage + 1)}
                 >
-                  <ChevronRight className="h-4 w-4" />
+                  <ChevronRight className="h-3 w-3" />
                 </Button>
               </div>
             </div>
@@ -436,49 +310,49 @@ export const ManagerDashboard: React.FC = () => {
         </Card>
       </div>
 
-      {/* Ingredientes Card */}
+      {/* Catálogo de Materias Primas / Ingredientes (Mantenimiento) */}
       <Card className="glass-panel border-none p-6 shadow-xl">
         <CardHeader className="px-0 pt-0 flex flex-row items-center justify-between">
           <div>
             <CardTitle className="text-lg font-bold text-white flex items-center gap-2">
-              <Layers className="h-5 w-5 text-secondary" />
-              Catálogo de Materias Primas / Ingredientes
+              <Layers className="h-5 w-5 text-emerald-400" />
+              Almacén de Materias Primas / Ingredientes
             </CardTitle>
-            <CardDescription className="text-gray-400">Ingredientes utilizables en los lotes de producción</CardDescription>
+            <CardDescription className="text-gray-400">Registra y monitorea el catálogo de ingredientes para mezclas de producción</CardDescription>
           </div>
           <Dialog open={isIngredientModalOpen} onOpenChange={setIsIngredientModalOpen}>
             <DialogTrigger asChild>
-              <Button size="sm" className="bg-white/5 border border-white/10 hover:bg-white/10 text-white font-bold flex items-center gap-1.5">
-                Nuevo Ingrediente
+              <Button size="sm" className="bg-primary hover:bg-emerald-600 text-white font-bold flex items-center gap-1.5 rounded-lg cursor-pointer transition-colors text-xs py-1.5 px-3">
+                <PlusCircle className="h-4 w-4" /> Registrar Ingrediente
               </Button>
             </DialogTrigger>
-            <DialogContent className="glass-panel border-none text-white max-w-md">
+            <DialogContent className="glass-panel border-none text-white max-w-md shadow-2xl">
               <DialogHeader>
                 <DialogTitle className="text-lg font-bold text-white flex items-center gap-2">
-                  <Layers className="h-5 w-5 text-secondary" /> Nuevo Ingrediente
+                  <Layers className="h-5 w-5 text-emerald-400" /> Registrar Nueva Materia Prima
                 </DialogTitle>
               </DialogHeader>
               <form onSubmit={handleCreateIngredient} className="space-y-4 pt-4">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-gray-300">Nombre del Ingrediente</label>
+                  <label className="text-xs font-semibold text-gray-300">Nombre de la Materia Prima</label>
                   <Input
                     type="text"
-                    placeholder="ej. Concentrado de Suero de Leche"
+                    placeholder="ej. Monohidrato de Creatina"
                     value={ingredientName}
                     onChange={(e) => setIngredientName(e.target.value)}
-                    className="bg-white/5 border-white/10 text-white"
+                    className="bg-[#0a0f1d] border-white/10 text-white focus:border-primary focus:ring-1 focus:ring-primary rounded-lg"
                     disabled={creatingIngredient}
                     required
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-gray-300">Descripción</label>
+                  <label className="text-xs font-semibold text-gray-300">Descripción / Origen</label>
                   <Input
                     type="text"
-                    placeholder="Materia prima proteica"
+                    placeholder="ej. Incrementador de ATP de rápida absorción"
                     value={ingredientDesc}
                     onChange={(e) => setIngredientDesc(e.target.value)}
-                    className="bg-white/5 border-white/10 text-white"
+                    className="bg-[#0a0f1d] border-white/10 text-white focus:border-primary focus:ring-1 focus:ring-primary rounded-lg"
                     disabled={creatingIngredient}
                   />
                 </div>
@@ -486,37 +360,44 @@ export const ManagerDashboard: React.FC = () => {
                   <label className="text-xs font-semibold text-gray-300">Vida Útil Estimada (días)</label>
                   <Input
                     type="number"
-                    placeholder="ej. 180"
+                    placeholder="ej. 365"
                     value={ingredientLife}
                     onChange={(e) => setIngredientLife(e.target.value)}
-                    className="bg-white/5 border-white/10 text-white"
+                    className="bg-[#0a0f1d] border-white/10 text-white focus:border-primary focus:ring-1 focus:ring-primary rounded-lg"
                     disabled={creatingIngredient}
                     required
                   />
                 </div>
-                <Button
-                  type="submit"
-                  className="w-full bg-primary hover:bg-emerald-600 text-white font-bold mt-4"
+                <Button 
+                  type="submit" 
+                  className="w-full bg-primary hover:bg-emerald-600 text-white font-bold py-2 rounded-lg transition-colors cursor-pointer"
                   disabled={creatingIngredient}
                 >
-                  {creatingIngredient ? 'Guardando...' : 'Crear Ingrediente'}
+                  {creatingIngredient ? 'Registrando...' : 'Registrar Materia Prima'}
                 </Button>
               </form>
             </DialogContent>
           </Dialog>
         </CardHeader>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mt-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mt-4">
           {loadingIngredients ? (
-            <p className="text-xs text-gray-400">Cargando...</p>
+            <p className="text-xs text-gray-400 animate-pulse py-4">Cargando materias primas...</p>
+          ) : ingredients.length === 0 ? (
+            <p className="text-xs text-gray-400">No hay ingredientes registrados.</p>
           ) : (
             ingredients.map((ing) => (
-              <div key={ing.id} className="p-4 bg-white/5 rounded-xl border border-white/5 space-y-1">
-                <h4 className="font-bold text-white text-sm">{ing.name}</h4>
-                <p className="text-xs text-gray-400">{ing.description || 'Sin descripción'}</p>
-                <Badge className="bg-slate-800 text-slate-300 border border-slate-700 text-[10px] mt-1.5">
-                  Vida útil: {ing.shelfLifeDays} días
-                </Badge>
+              <div key={ing.id} className="p-4 bg-white/2 border border-white/5 rounded-2xl flex flex-col justify-between gap-3 hover:border-white/10 transition-all duration-150">
+                <div className="space-y-1">
+                  <h4 className="font-bold text-white text-xs tracking-wide">{ing.name}</h4>
+                  <p className="text-[10px] text-gray-500 leading-relaxed">{ing.description || 'Sin descripción'}</p>
+                </div>
+                <div className="pt-2 border-t border-white/5 flex items-center justify-between">
+                  <span className="text-[9px] text-gray-500">Duración:</span>
+                  <Badge className="bg-slate-800 text-slate-300 border border-slate-700 text-[9px] py-0.5 px-2 font-semibold">
+                    {ing.shelfLifeDays} días
+                  </Badge>
+                </div>
               </div>
             ))
           )}
@@ -525,4 +406,5 @@ export const ManagerDashboard: React.FC = () => {
     </div>
   );
 };
+
 export default ManagerDashboard;

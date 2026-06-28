@@ -9,6 +9,7 @@ const Login = lazy(() => import('../pages/Login'));
 const Register = lazy(() => import('../pages/Register'));
 const Traceability = lazy(() => import('../pages/Traceability'));
 const UserDashboard = lazy(() => import('../pages/UserDashboard'));
+const AdminDashboard = lazy(() => import('../pages/AdminDashboard'));
 const ManagerDashboard = lazy(() => import('../pages/ManagerDashboard'));
 const ProductList = lazy(() => import('../pages/ProductList'));
 const CreateProduct = lazy(() => import('../pages/CreateProduct'));
@@ -45,9 +46,18 @@ export const AppRoutes: React.FC = () => {
               <Route path="/quality-reports/new/:batchId" element={<CreateQualityReport />} />
             </Route>
 
-            {/* Rutas Privadas Gestión (ROLE_ADMIN, ROLE_MANAGER) */}
-            <Route element={<PrivateRoute allowedRoles={['ROLE_ADMIN', 'ROLE_MANAGER']} />}>
+            {/* Rutas Privadas Admin (ROLE_ADMIN) */}
+            <Route element={<PrivateRoute allowedRoles={['ROLE_ADMIN']} />}>
+              <Route path="/admin" element={<AdminDashboard />} />
+            </Route>
+
+            {/* Rutas Privadas Manager (ROLE_MANAGER) */}
+            <Route element={<PrivateRoute allowedRoles={['ROLE_MANAGER']} />}>
               <Route path="/manager" element={<ManagerDashboard />} />
+            </Route>
+
+            {/* Rutas Privadas Gestión Compartidas */}
+            <Route element={<PrivateRoute allowedRoles={['ROLE_ADMIN', 'ROLE_MANAGER']} />}>
               <Route path="/products" element={<ProductList />} />
               <Route path="/products/new" element={<CreateProduct />} />
               <Route path="/products/:productId/batches/new" element={<CreateBatch />} />
