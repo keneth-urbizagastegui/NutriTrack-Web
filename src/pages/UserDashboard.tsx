@@ -385,7 +385,6 @@ export const UserDashboard: React.FC = () => {
           </form>
         </DialogContent>
       </Dialog>
-      </div>
 
       {/* Buscador de Catálogo de Productos */}
       <Card className="glass-panel border-none p-6 shadow-2xl transition-all duration-200 hover:border-white/10">
