@@ -68,11 +68,10 @@ export const CreateBatch: React.FC = () => {
     const fetchBaseData = async () => {
       try {
         setLoadingProduct(true);
-        // Buscar el producto en la lista paginada
-        const prodRes = await api.get('/products');
-        const found = prodRes.data.content.find((p: Product) => p.id === Number(productId));
-        if (found) {
-          setProduct(found);
+        // Obtener el producto directamente por su ID
+        const prodRes = await api.get(`/products/${productId}`);
+        if (prodRes.data) {
+          setProduct(prodRes.data);
         } else {
           toast.error('Producto no encontrado.');
           navigate('/products');
