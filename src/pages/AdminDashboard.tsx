@@ -99,39 +99,9 @@ export const AdminDashboard: React.FC = () => {
   const [loadingAudit, setLoadingAudit] = useState(false);
   const [isAuditModalOpen, setIsAuditModalOpen] = useState(false);
 
-  // Mocks de Usuarios de la Semilla para Auditoría
-  const [seedUsers, setSeedUsers] = useState<SeedUser[]>([
-    {
-      id: 1,
-      username: 'admin',
-      email: 'admin@utec.edu.pe',
-      roles: ['ROLE_ADMIN', 'ROLE_MANAGER', 'ROLE_USER'],
-      status: 'ACTIVO',
-      registeredDate: '14/06/2026',
-      allergenCount: 0,
-      lastLogin: 'Hace 5 minutos'
-    },
-    {
-      id: 2,
-      username: 'manager',
-      email: 'manager@utec.edu.pe',
-      roles: ['ROLE_MANAGER', 'ROLE_USER'],
-      status: 'ACTIVO',
-      registeredDate: '14/06/2026',
-      allergenCount: 0,
-      lastLogin: 'Hace 2 horas'
-    },
-    {
-      id: 3,
-      username: 'victor.fitness',
-      email: 'victor@utec.edu.pe',
-      roles: ['ROLE_USER'],
-      status: 'ACTIVO',
-      registeredDate: '15/06/2026',
-      allergenCount: 2,
-      lastLogin: 'Ayer'
-    }
-  ]);
+  // Usuarios de la Base de Datos para Auditoría
+  const [seedUsers, setSeedUsers] = useState<SeedUser[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(true);
   const [selectedUserDetail, setSelectedUserDetail] = useState<SeedUser | null>(null);
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
 
@@ -188,10 +158,33 @@ export const AdminDashboard: React.FC = () => {
     }
   };
 
+  const fetchUsers = async () => {
+    try {
+      setLoadingUsers(true);
+      const response = await api.get('/users');
+      const formatted = response.data.map((u: any) => ({
+        id: u.id,
+        username: u.username,
+        email: u.email,
+        roles: u.roles,
+        status: u.username === 'admin' ? 'ACTIVO' : (sessionStorage.getItem(`user_status_${u.username}`) || 'ACTIVO'),
+        registeredDate: u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '14/06/2026',
+        allergenCount: u.allergenCount || 0,
+        lastLogin: u.username === 'admin' ? 'Hace 5 minutos' : (u.username === 'manager' ? 'Hace 2 horas' : 'Reciente')
+      }));
+      setSeedUsers(formatted);
+    } catch {
+      toast.error('Error al cargar la lista de usuarios desde el servidor.');
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
+
   useEffect(() => {
     Promise.resolve().then(() => {
       fetchSuppliers(0);
       fetchReports();
+      fetchUsers();
     });
   }, []);
 
@@ -258,6 +251,7 @@ export const AdminDashboard: React.FC = () => {
 
   const handleToggleUserStatus = (userId: number, username: string, currentStatus: 'ACTIVO' | 'SUSPENDIDO') => {
     const nextStatus = currentStatus === 'ACTIVO' ? 'SUSPENDIDO' : 'ACTIVO';
+    sessionStorage.setItem(`user_status_${username}`, nextStatus);
     setSeedUsers(seedUsers.map(u => u.id === userId ? { ...u, status: nextStatus } : u));
     toast.success(
       <div className="text-xs">
@@ -569,61 +563,75 @@ export const AdminDashboard: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5 text-gray-300">
-              {seedUsers.map((user) => (
-                <tr key={user.id} className="hover:bg-white/2 transition-colors">
-                  <td className="py-3.5 pr-4 font-bold text-white flex items-center gap-2">
-                    <div className="h-6 w-6 rounded-full bg-white/5 flex items-center justify-center border border-white/10 text-[10px] font-bold text-primary">
-                      {user.username.charAt(0).toUpperCase()}
-                    </div>
-                    {user.username}
-                  </td>
-                  <td className="py-3.5 pr-4">{user.email}</td>
-                  <td className="py-3.5 pr-4">{user.registeredDate}</td>
-                  <td className="py-3.5 pr-4 flex flex-wrap gap-1">
-                    {user.roles.map((role) => (
-                      <Badge 
-                        key={role} 
-                        className={`text-[8px] font-black uppercase ${
-                          role === 'ROLE_ADMIN' 
-                            ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' 
-                            : role === 'ROLE_MANAGER'
-                            ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20'
-                            : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                        }`}
-                      >
-                        {role === 'ROLE_ADMIN' ? 'Administrador' : role === 'ROLE_MANAGER' ? 'Gestor' : 'Deportista'}
-                      </Badge>
-                    ))}
-                  </td>
-                  <td className="py-3.5 pr-4 text-center">
-                    <Badge className={user.status === 'ACTIVO' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[9px]' : 'bg-rose-500/10 text-rose-400 border border-rose-500/20 text-[9px]'}>
-                      {user.status}
-                    </Badge>
-                  </td>
-                  <td className="py-3.5 text-right space-x-2">
-                    <Button 
-                      size="sm"
-                      variant="outline"
-                      className="border-white/10 text-white hover:bg-white/10 text-[10px] h-7 px-2.5 rounded-lg cursor-pointer"
-                      onClick={() => handleOpenUserDetail(user)}
-                    >
-                      <Search className="h-3 w-3 mr-1" /> Detalles
-                    </Button>
-                    {user.username !== 'admin' && (
-                      <Button
-                        size="sm"
-                        variant={user.status === 'ACTIVO' ? 'destructive' : 'default'}
-                        className={`text-[10px] h-7 px-2.5 rounded-lg cursor-pointer font-bold ${
-                          user.status === 'ACTIVO' ? 'bg-rose-950/20 border border-rose-500/20 text-rose-400 hover:bg-rose-900/40' : 'bg-primary hover:bg-emerald-600 text-white'
-                        }`}
-                        onClick={() => handleToggleUserStatus(user.id, user.username, user.status)}
-                      >
-                        {user.status === 'ACTIVO' ? 'Suspender' : 'Activar'}
-                      </Button>
-                    )}
+              {loadingUsers ? (
+                <tr>
+                  <td colSpan={6} className="py-8 text-center text-gray-500 font-semibold">
+                    Cargando cuentas de usuario desde la base de datos...
                   </td>
                 </tr>
-              ))}
+              ) : seedUsers.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="py-8 text-center text-gray-500 font-semibold">
+                    No se encontraron cuentas de usuario registradas.
+                  </td>
+                </tr>
+              ) : (
+                seedUsers.map((user) => (
+                  <tr key={user.id} className="hover:bg-white/2 transition-colors">
+                    <td className="py-3.5 pr-4 font-bold text-white flex items-center gap-2">
+                      <div className="h-6 w-6 rounded-full bg-white/5 flex items-center justify-center border border-white/10 text-[10px] font-bold text-primary">
+                        {user.username.charAt(0).toUpperCase()}
+                      </div>
+                      {user.username}
+                    </td>
+                    <td className="py-3.5 pr-4">{user.email}</td>
+                    <td className="py-3.5 pr-4">{user.registeredDate}</td>
+                    <td className="py-3.5 pr-4 flex flex-wrap gap-1">
+                      {user.roles.map((role) => (
+                        <Badge 
+                          key={role} 
+                          className={`text-[8px] font-black uppercase ${
+                            role === 'ROLE_ADMIN' 
+                              ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' 
+                              : role === 'ROLE_MANAGER'
+                              ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20'
+                              : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                          }`}
+                        >
+                          {role === 'ROLE_ADMIN' ? 'Administrador' : role === 'ROLE_MANAGER' ? 'Gestor' : 'Deportista'}
+                        </Badge>
+                      ))}
+                    </td>
+                    <td className="py-3.5 pr-4 text-center">
+                      <Badge className={user.status === 'ACTIVO' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[9px]' : 'bg-rose-500/10 text-rose-400 border border-rose-500/20 text-[9px]'}>
+                        {user.status}
+                      </Badge>
+                    </td>
+                    <td className="py-3.5 text-right space-x-2">
+                      <Button 
+                        size="sm"
+                        variant="outline"
+                        className="border-white/10 text-white hover:bg-white/10 text-[10px] h-7 px-2.5 rounded-lg cursor-pointer"
+                        onClick={() => handleOpenUserDetail(user)}
+                      >
+                        <Search className="h-3 w-3 mr-1" /> Detalles
+                      </Button>
+                      {user.username !== 'admin' && (
+                        <Button
+                          size="sm"
+                          variant={user.status === 'ACTIVO' ? 'destructive' : 'default'}
+                          className={`text-[10px] h-7 px-2.5 rounded-lg cursor-pointer font-bold ${
+                            user.status === 'ACTIVO' ? 'bg-rose-950/20 border border-rose-500/20 text-rose-400 hover:bg-rose-900/40' : 'bg-primary hover:bg-emerald-600 text-white'
+                          }`}
+                          onClick={() => handleToggleUserStatus(user.id, user.username, user.status)}
+                        >
+                          {user.status === 'ACTIVO' ? 'Suspender' : 'Activar'}
+                        </Button>
+                      )}
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
