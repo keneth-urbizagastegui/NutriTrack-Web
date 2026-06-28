@@ -77,8 +77,16 @@ export const Profile: React.FC = () => {
       
       toast.success(`"${allergenName}" eliminado de tus alérgenos.`);
     } catch (err) {
-      const error = err as { response?: { data?: { message?: string } } };
-      toast.error(error.response?.data?.message || 'Error al eliminar el alérgeno.');
+      const error = err as { response?: { status?: number, data?: { message?: string } } };
+      
+      if (error.response?.status === 404) {
+        const updatedAllergens = sessionAllergens.filter((a) => a.id !== allergenId);
+        setSessionAllergens(updatedAllergens);
+        sessionStorage.setItem('sessionAllergens', JSON.stringify(updatedAllergens));
+        toast.warning(`El ingrediente "${allergenName}" ya no existe en el catálogo, por lo que fue retirado.`);
+      } else {
+        toast.error(error.response?.data?.message || 'Error al eliminar el alérgeno.');
+      }
     } finally {
       setSavingId(null);
     }
