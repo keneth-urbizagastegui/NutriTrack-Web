@@ -34,8 +34,9 @@ export const Login: React.FC = () => {
       toast.success('Sesión iniciada correctamente.');
       
       // Redirigir según el rol
-      const isManagement = username.toLowerCase().includes('admin') || username.toLowerCase().includes('manager');
-      if (isManagement) {
+      if (username.toLowerCase().includes('admin')) {
+        navigate('/admin');
+      } else if (username.toLowerCase().includes('manager')) {
         navigate('/manager');
       } else {
         navigate('/dashboard');
