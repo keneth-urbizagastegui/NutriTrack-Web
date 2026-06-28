@@ -8,8 +8,8 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { 
   ShieldAlert, ShieldCheck, Factory, ToggleLeft, ToggleRight, 
-  ChevronLeft, ChevronRight, Users, Activity, Lock, AlertTriangle, 
-  ShieldX, Eye, Shield, Key, Search, Mail, Calendar, EyeOff, Award, MapPin
+  ChevronLeft, ChevronRight, Users, AlertTriangle, 
+  ShieldX, Eye, Shield, Key, Search, Award, MapPin
 } from 'lucide-react';
 
 interface Supplier {
@@ -101,7 +101,6 @@ export const AdminDashboard: React.FC = () => {
   const [loadingReports, setLoadingReports] = useState(true);
 
   // Auditoría de Trazabilidad de Lote
-  const [selectedAuditBatchId, setSelectedAuditBatchId] = useState<number | null>(null);
   const [auditData, setAuditData] = useState<TraceabilityData | null>(null);
   const [loadingAudit, setLoadingAudit] = useState(false);
   const [isAuditModalOpen, setIsAuditModalOpen] = useState(false);
@@ -130,7 +129,7 @@ export const AdminDashboard: React.FC = () => {
       const allResponse = await api.get('/suppliers', {
         params: { page: 0, size: 1000 }
       });
-      const activeCount = allResponse.data.content.filter((s: any) => s.isActive).length;
+      const activeCount = allResponse.data.content.filter((s: Supplier) => s.isActive).length;
       setTotalActiveSuppliersCount(activeCount);
     } catch {
       toast.error('Error al cargar la lista de proveedores.');
@@ -166,7 +165,15 @@ export const AdminDashboard: React.FC = () => {
     try {
       setLoadingUsers(true);
       const response = await api.get('/users');
-      const formatted = response.data.map((u: any) => ({
+      interface RawUserResponse {
+        id: number;
+        username: string;
+        email: string;
+        roles: string[];
+        createdAt?: string;
+        allergenCount?: number;
+      }
+      const formatted = response.data.map((u: RawUserResponse) => ({
         id: u.id,
         username: u.username,
         email: u.email,
@@ -208,7 +215,6 @@ export const AdminDashboard: React.FC = () => {
   }, []);
 
   const handleOpenAudit = (batchId: number) => {
-    setSelectedAuditBatchId(batchId);
     setIsAuditModalOpen(true);
     fetchTraceabilityAudit(batchId);
   };
@@ -319,7 +325,7 @@ export const AdminDashboard: React.FC = () => {
     <div className="space-y-8">
       {/* Encabezado General */}
       <Card className="glass-panel border-none p-6 shadow-2xl relative overflow-hidden flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
-        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-rose-500 to-amber-500" />
+        <div className="absolute top-0 left-0 right-0 h-1 bg-linear-to-r from-rose-500 to-amber-500" />
         <div>
           <h1 className="text-2xl font-bold text-white flex items-center gap-2 tracking-wide">
             <Shield className="h-6 w-6 text-rose-500 animate-pulse" />
@@ -353,7 +359,7 @@ export const AdminDashboard: React.FC = () => {
           <div className="space-y-1">
             <span className="text-[10px] text-gray-400 font-extrabold uppercase tracking-widest">Lotes Retirados</span>
             <h3 className="text-3xl font-black text-white">{recalledBatchesCount}</h3>
-            <p className="text-[10px] text-rose-400/80 font-medium font-bold">Fuera de circulación</p>
+            <p className="text-[10px] text-rose-400/80 font-bold">Fuera de circulación</p>
           </div>
           <div className="p-3 bg-rose-500/10 text-rose-500 rounded-xl border border-rose-500/10">
             <ShieldX className="h-6 w-6" />

@@ -46,7 +46,7 @@ export const Timeline: React.FC<TimelineProps> = ({ steps }) => {
   return (
     <div className="relative ml-4 py-2 space-y-8">
       {/* Línea conectora vertical con gradiente */}
-      <div className="absolute left-[15px] top-4 bottom-4 w-[2px] bg-gradient-to-b from-primary via-emerald-500/40 to-slate-800" />
+      <div className="absolute left-3.75 top-4 bottom-4 w-0.5 bg-linear-to-b from-primary via-emerald-500/40 to-slate-800" />
 
       {steps.map((step, idx) => (
         <div key={idx} className="relative ml-8">

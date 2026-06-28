@@ -167,7 +167,7 @@ export const ManagerDashboard: React.FC = () => {
     <div className="space-y-8">
       {/* Encabezado General del Panel de Gestión de Producción */}
       <Card className="glass-panel border-none p-6 shadow-2xl relative overflow-hidden flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
-        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 to-cyan-500" />
+        <div className="absolute top-0 left-0 right-0 h-1 bg-linear-to-r from-emerald-500 to-cyan-500" />
         <div>
           <h1 className="text-2xl font-bold text-white flex items-center gap-2 tracking-wide">
             <Factory className="h-6 w-6 text-emerald-500 animate-pulse" />

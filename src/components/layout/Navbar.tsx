@@ -21,7 +21,7 @@ export const Navbar: React.FC = () => {
       <nav className="glass-panel sticky top-0 z-50 w-full rounded-none border-t-0 border-x-0 border-b border-white/10 px-6 py-4 flex items-center justify-between shadow-lg">
         <div className="flex items-center gap-2">
           <Dumbbell className="h-6 w-6 text-primary animate-pulse" />
-          <Link to="/" className="text-xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+          <Link to="/" className="text-xl font-bold bg-linear-to-r from-primary to-secondary bg-clip-text text-transparent">
             NutriTrack
           </Link>
         </div>
