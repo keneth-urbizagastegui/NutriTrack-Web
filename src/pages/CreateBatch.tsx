@@ -8,7 +8,6 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Loader2, Dumbbell, QrCode, Check, Link as LinkIcon, Download } from 'lucide-react';
 import { useNavigate as routerNavigate } from 'react-router-dom';
-import { useAuthStore } from '../store/useAuthStore';
 
 interface Product {
   id: number;
@@ -43,7 +42,6 @@ interface CreatedBatch {
 export const CreateBatch: React.FC = () => {
   const { productId } = useParams<{ productId: string }>();
   const navigate = routerNavigate();
-  const { user } = useAuthStore();
 
   const [product, setProduct] = useState<Product | null>(null);
   const [loadingProduct, setLoadingProduct] = useState(true);
@@ -412,7 +410,7 @@ export const CreateBatch: React.FC = () => {
               {/* Botón Finalizar */}
               <div className="flex justify-end pt-4 border-t border-white/5">
                 <Button asChild className="bg-primary hover:bg-emerald-600 text-white font-bold">
-                  <Link to={user?.roles.includes('ROLE_ADMIN') ? '/admin' : '/manager'}>
+                  <Link to="/products">
                     Finalizar Creación de Lote
                   </Link>
                 </Button>

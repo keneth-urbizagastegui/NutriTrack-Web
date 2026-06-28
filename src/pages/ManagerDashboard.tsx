@@ -95,7 +95,7 @@ export const ManagerDashboard: React.FC = () => {
     try {
       setLoadingIngredients(true);
       const response = await api.get('/ingredients', {
-        params: { page, size: 10, sort: 'name,asc' }
+        params: { page, size: 12, sort: 'name,asc' }
       });
       setIngredients(response.data.content);
       setIngredientTotalPages(response.data.totalPages);
