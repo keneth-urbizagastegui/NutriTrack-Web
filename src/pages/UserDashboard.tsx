@@ -327,6 +327,18 @@ export const UserDashboard: React.FC = () => {
                   </Badge>
                 </div>
 
+                {getProductAllergenWarning(targetProduct.name, targetProduct.description) && (
+                  <div className="bg-rose-500/20 border border-rose-500/30 text-rose-300 rounded-lg p-3 text-xs flex items-start gap-2 animate-pulse">
+                    <AlertTriangle className="h-4 w-4 text-rose-400 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-bold text-rose-200 text-xs">¡Advertencia de Alérgeno!</p>
+                      <p className="text-[10px] text-rose-300/90 mt-0.5 leading-relaxed">
+                        Este producto contiene <strong>{getProductAllergenWarning(targetProduct.name, targetProduct.description)}</strong>, el cual está en tu lista de alérgenos. Si intentas registrar este consumo, el sistema lo bloqueará por seguridad.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
                 {calculatedMacros && (
                   <div className="pt-2 border-t border-white/5 space-y-2">
                     <p className="text-[9px] uppercase font-bold tracking-wider text-primary">Nutrientes a Registrar ({gramsValue}g)</p>
