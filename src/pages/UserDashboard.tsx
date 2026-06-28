@@ -404,7 +404,10 @@ export const UserDashboard: React.FC = () => {
               </form>
             </DialogContent>
           </Dialog>
-        </Card>      {/* Buscador de Catálogo de Productos */}
+        </Card>
+      </div>
+
+      {/* Buscador de Catálogo de Productos */}
       <Card className="glass-panel border-none p-6 shadow-2xl transition-all duration-200 hover:border-white/10">
         <CardHeader className="px-0 pt-0">
           <CardTitle className="text-lg font-bold text-white">Buscador de Suplementos y Alimentos</CardTitle>
@@ -557,7 +560,7 @@ export const UserDashboard: React.FC = () => {
                     <th className="p-4 text-center">Grasas</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/5">vide-y divide-white/5">
+                <tbody className="divide-y divide-white/5">
                   {history.map((log) => (
                     <tr key={log.id} className="odd:bg-white/2 even:bg-transparent hover:bg-white/5 transition-all duration-200 cursor-help" title="Registro de ingesta certificado e inmutable">
                       <td className="p-4 text-xs font-medium text-gray-400">
