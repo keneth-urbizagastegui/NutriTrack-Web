@@ -6,7 +6,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Loader2, Dumbbell, QrCode, Check, Link as LinkIcon } from 'lucide-react';
+import { ArrowLeft, Loader2, Dumbbell, QrCode, Check, Link as LinkIcon, Download } from 'lucide-react';
 import { useNavigate as routerNavigate } from 'react-router-dom';
 
 interface Product {
@@ -266,18 +266,55 @@ export const CreateBatch: React.FC = () => {
             <div className="space-y-8">
               {/* Código QR Generado */}
               <div className="p-5 bg-white/5 border border-white/5 rounded-xl flex flex-col sm:flex-row items-center gap-6">
-                {createdBatch.qrCodeUrl ? (
-                  <img 
-                    src={createdBatch.qrCodeUrl} 
-                    alt="Lote QR" 
-                    className="w-32 h-32 bg-white p-2 rounded-lg shadow-lg border border-gray-200"
-                  />
-                ) : (
-                  <div className="w-32 h-32 bg-slate-800 border border-slate-700 flex flex-col items-center justify-center rounded-lg text-center text-xs text-gray-500 p-2">
-                    <QrCode className="h-8 w-8 mb-1 text-gray-600 animate-pulse" />
-                    Generando QR...
-                  </div>
-                )}
+                <div className="flex flex-col items-center shrink-0">
+                  {createdBatch.qrCodeUrl ? (
+                    <>
+                      <img 
+                        src={createdBatch.qrCodeUrl} 
+                        alt="Lote QR" 
+                        className="w-32 h-32 bg-white p-2 rounded-lg shadow-lg border border-gray-200"
+                      />
+                      <Button
+                        size="sm"
+                        className="bg-primary hover:bg-emerald-600 text-white font-bold text-[10px] h-7 px-2.5 flex items-center gap-1 mt-2 cursor-pointer shadow-md w-full justify-center"
+                        onClick={async () => {
+                          try {
+                            if (createdBatch.qrCodeUrl.startsWith('data:')) {
+                              const link = document.createElement('a');
+                              link.href = createdBatch.qrCodeUrl;
+                              link.download = `QR-LOTE-${createdBatch.batchNumber}.png`;
+                              document.body.appendChild(link);
+                              link.click();
+                              document.body.removeChild(link);
+                            } else {
+                              const response = await fetch(createdBatch.qrCodeUrl);
+                              const blob = await response.blob();
+                              const blobUrl = URL.createObjectURL(blob);
+                              const link = document.createElement('a');
+                              link.href = blobUrl;
+                              link.download = `QR-LOTE-${createdBatch.batchNumber}.png`;
+                              document.body.appendChild(link);
+                              link.click();
+                              document.body.removeChild(link);
+                              URL.revokeObjectURL(blobUrl);
+                            }
+                            toast.success('Descarga del código QR iniciada.');
+                          } catch {
+                            window.open(createdBatch.qrCodeUrl, '_blank');
+                            toast.info('Se abrió el código QR en otra pestaña para guardar.');
+                          }
+                        }}
+                      >
+                        <Download className="h-3.5 w-3.5" /> Descargar QR
+                      </Button>
+                    </>
+                  ) : (
+                    <div className="w-32 h-32 bg-slate-800 border border-slate-700 flex flex-col items-center justify-center rounded-lg text-center text-xs text-gray-500 p-2">
+                      <QrCode className="h-8 w-8 mb-1 text-gray-600 animate-pulse" />
+                      Generando QR...
+                    </div>
+                  )}
+                </div>
                 <div className="space-y-2 text-center sm:text-left">
                   <h3 className="text-lg font-bold text-white flex items-center justify-center sm:justify-start gap-1.5">
                     <Check className="h-5 w-5 text-primary" /> Lote Creado Exitosamente
