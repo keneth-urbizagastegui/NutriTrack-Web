@@ -20,7 +20,8 @@ export const Breadcrumbs: React.FC = () => {
     new: 'Nuevo',
     batches: 'Lotes',
     traceability: 'Trazabilidad pública',
-    'quality-reports': 'Reportes de Calidad'
+    'quality-reports': 'Reportes de Calidad',
+    admin: 'Panel Admin'
   };
 
   // Rutas intermedias que no deben ser clickeables por no tener páginas individuales independientes
