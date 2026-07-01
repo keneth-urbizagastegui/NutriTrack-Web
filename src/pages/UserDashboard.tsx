@@ -128,19 +128,15 @@ export const UserDashboard: React.FC = () => {
       });
 
       const now = new Date();
-      const year = now.getFullYear();
-      const month = String(now.getMonth() + 1).padStart(2, '0');
-      const day = String(now.getDate()).padStart(2, '0');
+      const todayUTC = new Date(now.getTime() + now.getTimezoneOffset() * 60000);
+      const year = todayUTC.getFullYear();
+      const month = String(todayUTC.getMonth() + 1).padStart(2, '0');
+      const day = String(todayUTC.getDate()).padStart(2, '0');
       const today = `${year}-${month}-${day}`;
 
-      const todayConsumptions = allResponse.data.content.filter((item: ConsumptionLog) => {
-      const itemDate = new Date(item.consumptionDate);
-      return (
-        itemDate.getFullYear() === year &&
-        itemDate.getMonth() + 1 === Number(month) &&
-       itemDate.getDate() === Number(day)
-        );
-      });
+      const todayConsumptions = allResponse.data.content.filter((item: ConsumptionLog) => 
+        item.consumptionDate.startsWith(today)
+      );
 
       const totals = todayConsumptions.reduce((acc: MacroTotals, curr: ConsumptionLog) => {
         acc.protein += curr.consumedMacros.protein;
