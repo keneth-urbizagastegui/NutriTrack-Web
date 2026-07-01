@@ -133,9 +133,14 @@ export const UserDashboard: React.FC = () => {
       const day = String(now.getDate()).padStart(2, '0');
       const today = `${year}-${month}-${day}`;
 
-      const todayConsumptions = allResponse.data.content.filter((item: ConsumptionLog) => 
-        item.consumptionDate.startsWith(today)
-      );
+      const todayConsumptions = allResponse.data.content.filter((item: ConsumptionLog) => {
+      const itemDate = new Date(item.consumptionDate);
+      return (
+        itemDate.getFullYear() === year &&
+        itemDate.getMonth() + 1 === Number(month) &&
+       itemDate.getDate() === Number(day)
+        );
+      });
 
       const totals = todayConsumptions.reduce((acc: MacroTotals, curr: ConsumptionLog) => {
         acc.protein += curr.consumedMacros.protein;
